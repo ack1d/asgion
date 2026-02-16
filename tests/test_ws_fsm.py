@@ -319,6 +319,23 @@ def test_denial_lifecycle_no_violations(validator: WebSocketFSMValidator) -> Non
     assert ctx.ws.phase == WSPhase.CLOSED
 
 
+def test_wf011_send_after_denial_start(validator: WebSocketFSMValidator) -> None:
+    ctx = _drive_to_handshake(validator)
+    validator.validate_send(
+        ctx, {"type": "websocket.http.response.start", "status": 403, "headers": []}
+    )
+    validator.validate_send(ctx, {"type": "websocket.send", "text": "hello"})
+    v = assert_violation(ctx, "WF-011")
+    assert v.severity == "error"
+
+
+def test_wf011_send_before_denial_passes(validator: WebSocketFSMValidator) -> None:
+    ctx = _drive_to_connected(validator)
+    validator.validate_send(ctx, {"type": "websocket.send", "text": "hello"})
+    matching = [v for v in ctx.violations if v.rule_id == "WF-011"]
+    assert matching == []
+
+
 def test_state_transitions_connecting_to_handshake(
     validator: WebSocketFSMValidator,
 ) -> None:

@@ -11,6 +11,7 @@ from asgion.rules.ws_fsm import (
     WF_008,
     WF_009,
     WF_010,
+    WF_011,
     WF_012,
 )
 from asgion.validators.base import BaseValidator
@@ -65,6 +66,10 @@ class WebSocketFSMValidator(BaseValidator):
 
     def _validate_send_data(self, ctx: ConnectionContext) -> None:
         assert ctx.ws is not None
+
+        if ctx.ws.denial_started:
+            ctx.violation(WF_011)
+            return
 
         if not ctx.ws.accepted:
             ctx.violation(WF_003)

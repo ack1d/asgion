@@ -6,7 +6,7 @@ All validation rules that Asgion checks, grouped by protocol layer.
 
 Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asgiref](https://github.com/django/asgiref)).
 
-**Total: 79 rules**
+**Total: 80 rules**
 
 | Severity | Meaning |
 |----------|---------|
@@ -117,6 +117,7 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 | `WF-008` | error | send() called after websocket.close | - |
 | `WF-009` | error | websocket.http.response.start sent in wrong state | HTTP denial response can only be sent before accepting |
 | `WF-010` | error | websocket.http.response.body without preceding http.response.start | - |
+| `WF-011` | error | websocket.send after HTTP denial response started | Cannot send WebSocket data during HTTP denial flow |
 | `WF-012` | warning | websocket.receive after connection closed | - |
 
 ## Lifespan Events (Layer 6)

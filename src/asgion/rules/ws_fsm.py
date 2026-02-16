@@ -81,6 +81,14 @@ WF_010 = Rule(
     layer=_LAYER,
     scope_types=_SCOPES,
 )
+WF_011 = Rule(
+    "WF-011",
+    Severity.ERROR,
+    "websocket.send after HTTP denial response started",
+    hint="Cannot send WebSocket data during HTTP denial flow",
+    layer=_LAYER,
+    scope_types=_SCOPES,
+)
 WF_012 = Rule(
     "WF-012",
     Severity.WARNING,
