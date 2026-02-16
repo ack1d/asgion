@@ -338,6 +338,62 @@ def test_lf008_non_lifespan_scope_ignored(validator: LifespanFSMValidator) -> No
     assert_no_violations(ctx)
 
 
+def test_lf009_exit_during_startup(validator: LifespanFSMValidator) -> None:
+    ctx = make_lifespan_ctx()
+    _drive_to_starting(validator, ctx)
+    assert ctx.lifespan.phase == LifespanPhase.STARTING
+    validator.validate_complete(ctx)
+    v = assert_violation(ctx, "LF-009")
+    assert v.severity == "warning"
+
+
+def test_lf009_exit_after_startup_complete_passes(
+    validator: LifespanFSMValidator,
+) -> None:
+    ctx = make_lifespan_ctx()
+    _drive_to_started(validator, ctx)
+    validator.validate_complete(ctx)
+    matching = [v for v in ctx.violations if v.rule_id == "LF-009"]
+    assert matching == []
+
+
+def test_lf009_exit_after_startup_failed_passes(
+    validator: LifespanFSMValidator,
+) -> None:
+    ctx = make_lifespan_ctx()
+    _drive_to_starting(validator, ctx)
+    validator.validate_send(ctx, {"type": "lifespan.startup.failed"})
+    validator.validate_complete(ctx)
+    matching = [v for v in ctx.violations if v.rule_id == "LF-009"]
+    assert matching == []
+
+
+def test_lf010_state_dict_present(validator: LifespanFSMValidator) -> None:
+    ctx = make_lifespan_ctx()
+    scope = {**ctx.scope, "state": {}}
+    validator.validate_scope(ctx, scope)
+    v = assert_violation(ctx, "LF-010")
+    assert v.severity == "info"
+
+
+def test_lf010_state_dict_absent_passes(validator: LifespanFSMValidator) -> None:
+    ctx = make_lifespan_ctx()
+    assert "state" not in ctx.scope
+    validator.validate_scope(ctx, ctx.scope)
+    matching = [v for v in ctx.violations if v.rule_id == "LF-010"]
+    assert matching == []
+
+
+def test_lf010_non_lifespan_scope_ignored(validator: LifespanFSMValidator) -> None:
+    from tests.conftest import make_http_ctx
+
+    ctx = make_http_ctx()
+    scope = {**ctx.scope, "state": {}}
+    validator.validate_scope(ctx, scope)
+    matching = [v for v in ctx.violations if v.rule_id == "LF-010"]
+    assert matching == []
+
+
 def test_phase_transitions_happy_path(validator: LifespanFSMValidator) -> None:
     ctx = make_lifespan_ctx()
     assert ctx.lifespan.phase == LifespanPhase.WAITING

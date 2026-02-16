@@ -6,7 +6,7 @@ All validation rules that Asgion checks, grouped by protocol layer.
 
 Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asgiref](https://github.com/django/asgiref)).
 
-**Total: 80 rules**
+**Total: 82 rules**
 
 | Severity | Meaning |
 |----------|---------|
@@ -143,3 +143,5 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 | `LF-006` | error | lifespan.shutdown.complete/failed sent in wrong state | - |
 | `LF-007` | error | shutdown.complete and shutdown.failed are mutually exclusive | - |
 | `LF-008` | info | App exited during shutdown without sending complete/failed | - |
+| `LF-009` | warning | App exited during startup without sending startup.complete or startup.failed | An exception during startup is not the same as startup.failed — send the proper signal |
+| `LF-010` | info | Lifespan state dict is available for sharing state with requests | state is mutable in lifespan scope and shallow-copied to request scopes |

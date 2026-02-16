@@ -1,4 +1,4 @@
-from asgion.core._types import LifespanPhase, Message, ScopeType
+from asgion.core._types import LifespanPhase, Message, Scope, ScopeType
 from asgion.core.context import ConnectionContext
 from asgion.rules.lifespan_fsm import (
     LF_001,
@@ -9,6 +9,8 @@ from asgion.rules.lifespan_fsm import (
     LF_006,
     LF_007,
     LF_008,
+    LF_009,
+    LF_010,
 )
 from asgion.validators.base import BaseValidator
 
@@ -43,10 +45,20 @@ class LifespanFSMValidator(BaseValidator):
         elif msg_type == "lifespan.shutdown.failed":
             self._validate_shutdown_failed(ctx)
 
+    def validate_scope(self, ctx: ConnectionContext, scope: Scope) -> None:
+        if ctx.scope_type != ScopeType.LIFESPAN:
+            return
+
+        if "state" in scope:
+            ctx.violation(LF_010)
+
     def validate_complete(self, ctx: ConnectionContext) -> None:
         if ctx.scope_type != ScopeType.LIFESPAN:
             return
         assert ctx.lifespan is not None
+
+        if ctx.lifespan.phase == LifespanPhase.STARTING:
+            ctx.violation(LF_009)
 
         if ctx.lifespan.phase == LifespanPhase.SHUTTING_DOWN:
             ctx.violation(LF_008)

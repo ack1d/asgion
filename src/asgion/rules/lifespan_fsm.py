@@ -62,3 +62,19 @@ LF_008 = Rule(
     layer=_LAYER,
     scope_types=_SCOPES,
 )
+LF_009 = Rule(
+    "LF-009",
+    Severity.WARNING,
+    "App exited during startup without sending startup.complete or startup.failed",
+    hint="An exception during startup is not the same as startup.failed — send the proper signal",
+    layer=_LAYER,
+    scope_types=_SCOPES,
+)
+LF_010 = Rule(
+    "LF-010",
+    Severity.INFO,
+    "Lifespan state dict is available for sharing state with requests",
+    hint="state is mutable in lifespan scope and shallow-copied to request scopes",
+    layer=_LAYER,
+    scope_types=_SCOPES,
+)
