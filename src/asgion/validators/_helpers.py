@@ -10,16 +10,24 @@ def validate_headers(
     rule: Rule,
     *,
     lowercase_rule: Rule | None = None,
+    name_type_rule: Rule | None = None,
+    value_type_rule: Rule | None = None,
 ) -> None:
     """Validate headers format: iterable of ``(bytes, bytes)`` pairs.
 
     Args:
         ctx: Connection context to record violations on.
         headers: The headers value to validate.
-        rule: Rule for structural issues (not iterable, bad pair format, wrong types).
+        rule: Rule for structural issues (not iterable, bad pair format).
         lowercase_rule: Optional rule for non-lowercase header names.
+        name_type_rule: Optional separate rule for header name type errors.
+            Falls back to ``rule`` if not provided.
+        value_type_rule: Optional separate rule for header value type errors.
+            Falls back to ``rule`` if not provided.
 
     """
+    _name_rule = name_type_rule or rule
+    _value_rule = value_type_rule or rule
     try:
         for item in headers:
             if not isinstance(item, (list | tuple)) or len(item) != 2:
@@ -27,9 +35,11 @@ def validate_headers(
                 return
             name, value = item
             if not isinstance(name, bytes):
-                ctx.violation(rule, f"Header name must be bytes, got {type(name).__name__}")
+                ctx.violation(_name_rule, f"Header name must be bytes, got {type(name).__name__}")
             if not isinstance(value, bytes):
-                ctx.violation(rule, f"Header value must be bytes, got {type(value).__name__}")
+                ctx.violation(
+                    _value_rule, f"Header value must be bytes, got {type(value).__name__}"
+                )
             if lowercase_rule is not None and isinstance(name, bytes) and name != name.lower():
                 ctx.violation(lowercase_rule, f"Header name should be lowercase: {name!r}")
     except TypeError:

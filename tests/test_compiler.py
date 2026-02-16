@@ -513,7 +513,7 @@ def test_lifespan_spec_compiles() -> None:
 def test_all_specs_total_rules() -> None:
     from asgion.spec import SPEC_RULES
 
-    assert len(SPEC_RULES) == 47
+    assert len(SPEC_RULES) == 58
 
 
 def test_rule_layer_metadata() -> None:

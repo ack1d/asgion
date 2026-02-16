@@ -286,6 +286,28 @@ def _compile_headers_format(
         )
         rules[check.lowercase_rule_id] = lowercase_rule
 
+    name_type_rule: Rule | None = None
+    if check.name_type_rule_id:
+        name_type_rule = Rule(
+            check.name_type_rule_id,
+            Severity.ERROR,
+            "Header name must be bytes",
+            layer=layer,
+            scope_types=scope_types,
+        )
+        rules[check.name_type_rule_id] = name_type_rule
+
+    value_type_rule: Rule | None = None
+    if check.value_type_rule_id:
+        value_type_rule = Rule(
+            check.value_type_rule_id,
+            Severity.ERROR,
+            "Header value must be bytes",
+            layer=layer,
+            scope_types=scope_types,
+        )
+        rules[check.value_type_rule_id] = value_type_rule
+
     forbidden_pairs: list[tuple[bytes, Rule]] = []
     for fh in check.forbidden:
         fh_summary = fh.summary or f"{fh.name.decode()} header in response"
@@ -305,7 +327,14 @@ def _compile_headers_format(
         if field not in msg:
             return
         headers = msg[field]
-        validate_headers(ctx, headers, format_rule, lowercase_rule=lowercase_rule)
+        validate_headers(
+            ctx,
+            headers,
+            format_rule,
+            lowercase_rule=lowercase_rule,
+            name_type_rule=name_type_rule,
+            value_type_rule=value_type_rule,
+        )
         if forbidden_tuple:
             _check_forbidden_headers(ctx, headers, forbidden_tuple)
 

@@ -71,6 +71,8 @@ class HeadersFormat:
     field: str
     format_rule_id: str
     lowercase_rule_id: str = ""
+    name_type_rule_id: str = ""
+    value_type_rule_id: str = ""
     forbidden: tuple[ForbiddenHeader, ...] = ()
     severity: Severity = Severity.ERROR
     summary: str = ""

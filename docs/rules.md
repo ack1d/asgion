@@ -6,7 +6,7 @@ All validation rules that Asgion checks, grouped by protocol layer.
 
 Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asgiref](https://github.com/django/asgiref)).
 
-**Total: 95 rules**
+**Total: 106 rules**
 
 | Severity | Meaning |
 |----------|---------|
@@ -60,6 +60,17 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 | `HS-011` | error | scope missing 'path' field | - |
 | `HS-012` | error | scope['path'] must be str | - |
 | `HS-013` | warning | HTTP path should start with '/' | - |
+| `HS-014` | error | scope missing 'raw_path' field | - |
+| `HS-015` | error | scope['raw_path'] must be bytes | - |
+| `HS-016` | error | scope missing 'query_string' field | - |
+| `HS-017` | error | scope['query_string'] must be bytes | - |
+| `HS-018` | error | scope missing 'root_path' field | - |
+| `HS-019` | error | scope['root_path'] must be str | - |
+| `HS-020` | error | scope missing 'headers' field | - |
+| `HS-021` | error | scope headers format invalid | - |
+| `HS-022` | error | Header name must be bytes | - |
+| `HS-023` | error | Header value must be bytes | - |
+| `HS-024` | warning | Header name should be lowercase | - |
 
 ## HTTP Events (Layer 4)
 > Spec: <https://asgi.readthedocs.io/en/latest/specs/www.html>
