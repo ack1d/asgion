@@ -6,7 +6,7 @@ All validation rules that Asgion checks, grouped by protocol layer.
 
 Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asgiref](https://github.com/django/asgiref)).
 
-**Total: 106 rules**
+**Total: 110 rules**
 
 | Severity | Meaning |
 |----------|---------|
@@ -71,6 +71,10 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 | `HS-022` | error | Header name must be bytes | - |
 | `HS-023` | error | Header value must be bytes | - |
 | `HS-024` | warning | Header name should be lowercase | - |
+| `HS-025` | error | Invalid client format in HTTP scope | client must be None or [host: str, port: int] |
+| `HS-026` | error | Invalid server format in HTTP scope | server must be None or [host: str, port: int\|None] |
+| `HS-027` | error | Invalid extensions type in HTTP scope | extensions must be None or dict |
+| `HS-028` | error | Invalid state type in HTTP scope | state must be a dict |
 
 ## HTTP Events (Layer 4)
 > Spec: <https://asgi.readthedocs.io/en/latest/specs/www.html>

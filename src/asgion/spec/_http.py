@@ -44,6 +44,46 @@ def _check_path_slash(v: Any) -> str | None:
     return None if v.startswith("/") else f"Path should start with '/', got '{v}'"
 
 
+def _check_client(v: Any) -> str | None:
+    if v is None:
+        return None
+    if not isinstance(v, list | tuple) or len(v) != 2:
+        return "client must be None or [host: str, port: int]"
+    host, port = v
+    if not isinstance(host, str):
+        return f"client host must be str, got {type(host).__name__}"
+    if not isinstance(port, int):
+        return f"client port must be int, got {type(port).__name__}"
+    return None
+
+
+def _check_server(v: Any) -> str | None:
+    if v is None:
+        return None
+    if not isinstance(v, list | tuple) or len(v) != 2:
+        return "server must be None or [host: str, port: int]"
+    host, port = v
+    if not isinstance(host, str):
+        return f"server host must be str, got {type(host).__name__}"
+    if port is not None and not isinstance(port, int):
+        return f"server port must be int or None, got {type(port).__name__}"
+    return None
+
+
+def _check_extensions(v: Any) -> str | None:
+    if v is None:
+        return None
+    if not isinstance(v, dict):
+        return f"extensions must be None or dict, got {type(v).__name__}"
+    return None
+
+
+def _check_state(v: Any) -> str | None:
+    if not isinstance(v, dict):
+        return f"state must be dict, got {type(v).__name__}"
+    return None
+
+
 HTTP_SPEC = ProtocolSpec(
     name="http",
     layer="http.events",
@@ -107,6 +147,38 @@ HTTP_SPEC = ProtocolSpec(
             lowercase_rule_id="HS-024",
             name_type_rule_id="HS-022",
             value_type_rule_id="HS-023",
+        ),
+        FieldValue(
+            "client",
+            _check_client,
+            "HS-025",
+            severity=Severity.ERROR,
+            summary="Invalid client format in HTTP scope",
+            hint="client must be None or [host: str, port: int]",
+        ),
+        FieldValue(
+            "server",
+            _check_server,
+            "HS-026",
+            severity=Severity.ERROR,
+            summary="Invalid server format in HTTP scope",
+            hint="server must be None or [host: str, port: int|None]",
+        ),
+        FieldValue(
+            "extensions",
+            _check_extensions,
+            "HS-027",
+            severity=Severity.ERROR,
+            summary="Invalid extensions type in HTTP scope",
+            hint="extensions must be None or dict",
+        ),
+        FieldValue(
+            "state",
+            _check_state,
+            "HS-028",
+            severity=Severity.ERROR,
+            summary="Invalid state type in HTTP scope",
+            hint="state must be a dict",
         ),
     ),
     invalid_receive_rule_id="HE-005",
