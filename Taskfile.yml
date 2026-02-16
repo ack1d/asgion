@@ -1,0 +1,80 @@
+version: "3"
+
+silent: true
+
+tasks:
+  # -- Quality --
+
+  test:
+    aliases: [t]
+    desc: Run tests
+    cmd: uv run pytest
+
+  test:cov:
+    desc: Run tests with coverage
+    cmd: uv run pytest --cov
+
+  lint:
+    aliases: [l]
+    desc: Run linter
+    cmd: uv run ruff check src/ tests/
+
+  format:
+    aliases: [fmt]
+    desc: Format code
+    cmd: uv run ruff format src/ tests/
+
+  format:check:
+    desc: Check formatting without changes
+    cmd: uv run ruff format --check src/ tests/
+
+  typecheck:
+    aliases: [tc]
+    desc: Run type checker
+    cmd: uv run mypy src/
+
+  check:
+    desc: Run all checks in parallel (lint + format + typecheck + tests)
+    aliases: [c]
+    deps: [lint, format:check, typecheck, test]
+
+  fix:
+    aliases: [f]
+    desc: Auto-fix lint issues and format
+    cmds:
+      - uv run ruff check --fix src/ tests/
+      - uv run ruff format src/ tests/
+
+  # -- CI-like pipeline --
+
+  ci:
+    desc: Full CI pipeline (checks + coverage), sequential
+    cmds:
+      - task: lint
+      - task: format:check
+      - task: typecheck
+      - task: test:cov
+    preconditions:
+      - sh: command -v uv
+        msg: "uv is not installed — https://docs.astral.sh/uv/"
+
+  # -- Docs --
+
+  docs:rules:
+    desc: Generate rules reference (docs/rules.md)
+    cmd: uv run python docs/generate_rules.py
+    sources:
+      - src/asgion/rules/**/*.py
+      - src/asgion/spec/**/*.py
+      - docs/generate_rules.py
+    generates:
+      - docs/rules.md
+
+  # -- Housekeeping --
+
+  clean:
+    desc: Remove build artifacts and caches
+    cmds:
+      - rm -rf dist/ .mypy_cache/ .pytest_cache/ .ruff_cache/
+      - find src/ tests/ -type d -name __pycache__ -exec rm -rf {} +
+      - find src/ -type d -name '*.egg-info' -exec rm -rf {} +

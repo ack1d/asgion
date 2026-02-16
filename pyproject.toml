@@ -1,0 +1,164 @@
+[project]
+name = "asgion"
+version = "0.1.0"
+description = "ASGI protocol inspector — validates, traces, and analyzes your ASGI app"
+readme = "README.md"
+license = "MIT"
+authors = [
+    { name = "Andrei Satseviсh", email = "satsevich.andrei@gmail.com" },
+]
+keywords = [
+    "asgi",
+    "validator",
+    "inspector",
+    "protocol",
+    "fastapi",
+    "starlette",
+    "litestar",
+    "django",
+    "testing",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: AsyncIO",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Software Development :: Quality Assurance",
+    "Typing :: Typed",
+]
+requires-python = ">=3.12"
+
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "asgion[cli]",
+    "mypy>=1.19.1",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.0",
+    "ruff>=0.15.1",
+]
+
+[project.optional-dependencies]
+cli = ["click>=8.3"]
+
+[project.scripts]
+asgion = "asgion.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/ack1d/asgion"
+Repository = "https://github.com/ack1d/asgion.git"
+Issues = "https://github.com/ack1d/asgion/issues"
+Changelog = "https://github.com/ack1d/asgion/blob/main/CHANGELOG.md"
+Documentation = "https://github.com/ack1d/asgion#readme"
+
+[build-system]
+requires = ["uv_build>=0.10.2,<0.11.0"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+exclude = ["examples/*",]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "N",      # pep8-naming
+    "UP",     # pyupgrade — modernize syntax
+    "ANN",    # flake8-annotations
+    "B",      # flake8-bugbear — common pitfalls
+    "S",      # flake8-bandit — security
+    "ASYNC",  # flake8-async — async mistakes
+    "BLE",    # flake8-blind-except — no bare except
+    "ISC",    # flake8-implicit-str-concat — accidental concat
+    "PGH",    # pygrep-hooks — blanket noqa/type-ignore
+    "A",      # flake8-builtins — no shadowing builtins
+    "C4",     # flake8-comprehensions — better comprehensions
+    "SIM",    # flake8-simplify — simplify code
+    "RET",    # flake8-return — return statement best practices
+    "RSE",    # flake8-raise — raise best practices
+    "PIE",    # flake8-pie — misc lints
+    "FLY",    # flynt — use f-strings
+    "FURB",   # refurb — modernize patterns
+    "PERF",   # perflint — performance
+    "T20",    # flake8-print — no print() in library code
+    "LOG",    # flake8-logging — logging best practices
+    "ARG",    # flake8-unused-arguments
+    "ERA",    # eradicate — no commented-out code
+    "TID",    # flake8-tidy-imports
+    "TC",     # flake8-type-checking
+    "SLOT",   # flake8-slots — enforce __slots__
+    "INP",    # flake8-no-pep420 — require __init__.py
+    "DTZ",    # flake8-datetimez — timezone-aware datetime
+    "SLF",    # flake8-self — no private member access from outside
+    "ICN",    # flake8-import-conventions
+    "PLE",    # pylint errors — actual bugs
+    "PLW",    # pylint warnings
+    "PLC",    # pylint conventions
+    "PT",     # flake8-pytest-style
+    "RUF",    # ruff-specific rules
+    "TRY",    # tryceratops — exception handling
+]
+ignore = [
+    "E501",     # line too long — formatter handles
+    "ANN401",   # Any in signatures — validation library inspects dynamic input
+    "ISC001",   # implicit string concat — conflicts with formatter
+    "PLC0415",  # import not at top level — intentional lazy imports in registry
+    "TRY003",   # long exception messages — fine for violation details
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/**/*.py" = ["S101", "ANN", "ARG", "SLF", "T20", "SIM105"]
+"src/asgion/validators/**/*.py" = ["S101"]  # assert for type narrowing (ctx.http is not None)
+
+[tool.ruff.lint.isort]
+known-first-party = ["asgion"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_unreachable = true
+pretty = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "-v",
+    "--tb=short",
+]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["asgion"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "\\.\\.\\.",
+]
