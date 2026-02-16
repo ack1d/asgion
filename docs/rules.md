@@ -6,7 +6,7 @@ All validation rules that Asgion checks, grouped by protocol layer.
 
 Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asgiref](https://github.com/django/asgiref)).
 
-**Total: 110 rules**
+**Total: 135 rules**
 
 | Severity | Meaning |
 |----------|---------|
@@ -75,6 +75,37 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 | `HS-026` | error | Invalid server format in HTTP scope | server must be None or [host: str, port: int\|None] |
 | `HS-027` | error | Invalid extensions type in HTTP scope | extensions must be None or dict |
 | `HS-028` | error | Invalid state type in HTTP scope | state must be a dict |
+
+## WebSocket Scope Fields (Layer 2)
+> Spec: <https://asgi.readthedocs.io/en/latest/specs/websocket.html>
+
+| ID | Severity | Summary | Hint |
+|----|----------|---------|------|
+| `WS-001` | error | Scope type is not 'websocket' | - |
+| `WS-002` | error | scope missing 'http_version' field | - |
+| `WS-003` | error | scope['http_version'] must be str | - |
+| `WS-004` | error | scope missing 'scheme' field | - |
+| `WS-005` | error | scope['scheme'] must be str | - |
+| `WS-006` | warning | Unknown WebSocket scheme | Expected 'ws' or 'wss' |
+| `WS-007` | error | scope missing 'path' field | - |
+| `WS-008` | error | scope['path'] must be str | - |
+| `WS-009` | error | scope missing 'raw_path' field | - |
+| `WS-010` | error | scope['raw_path'] must be bytes | - |
+| `WS-011` | error | scope missing 'query_string' field | - |
+| `WS-012` | error | scope['query_string'] must be bytes | - |
+| `WS-013` | error | scope missing 'root_path' field | - |
+| `WS-014` | error | scope['root_path'] must be str | - |
+| `WS-015` | error | scope missing 'headers' field | - |
+| `WS-016` | error | scope headers format invalid | - |
+| `WS-017` | error | Header name must be bytes | - |
+| `WS-018` | error | Header value must be bytes | - |
+| `WS-019` | warning | Header name should be lowercase | - |
+| `WS-020` | error | scope missing 'subprotocols' field | - |
+| `WS-021` | error | Invalid subprotocols format | subprotocols must be an iterable of str |
+| `WS-022` | error | Invalid client format in WebSocket scope | - |
+| `WS-023` | error | Invalid server format in WebSocket scope | - |
+| `WS-024` | error | Invalid extensions type in WebSocket scope | - |
+| `WS-025` | error | Invalid state type in WebSocket scope | - |
 
 ## HTTP Events (Layer 4)
 > Spec: <https://asgi.readthedocs.io/en/latest/specs/www.html>

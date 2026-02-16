@@ -513,14 +513,20 @@ def test_lifespan_spec_compiles() -> None:
 def test_all_specs_total_rules() -> None:
     from asgion.spec import SPEC_RULES
 
-    assert len(SPEC_RULES) == 62
+    assert len(SPEC_RULES) == 87
 
 
 def test_rule_layer_metadata() -> None:
     from asgion.spec import SPEC_RULES
 
     for rule in SPEC_RULES.values():
-        assert rule.layer in ("http.events", "http.scope", "ws.events", "lifespan.events")
+        assert rule.layer in (
+            "http.events",
+            "http.scope",
+            "ws.events",
+            "ws.scope",
+            "lifespan.events",
+        )
         assert len(rule.scope_types) > 0
 
 

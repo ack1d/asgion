@@ -35,6 +35,7 @@ def make_ws_ctx(*, path: str = "/ws") -> ConnectionContext:
         "http_version": "1.1",
         "scheme": "ws",
         "path": path,
+        "raw_path": path.encode(),
         "query_string": b"",
         "root_path": "",
         "headers": [],

@@ -26,6 +26,7 @@ def _make_scope(scope_type: str = "http") -> dict:
             "http_version": "1.1",
             "scheme": "ws",
             "path": "/ws",
+            "raw_path": b"/ws",
             "query_string": b"",
             "root_path": "",
             "headers": [],
