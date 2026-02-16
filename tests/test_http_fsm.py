@@ -311,6 +311,57 @@ def test_hf015_status_204_empty_body_still_warns(validator: HTTPFSMValidator) ->
     assert_violation(ctx, "HF-015")
 
 
+def test_hf001_no_response_start(validator: HTTPFSMValidator) -> None:
+    ctx = make_http_ctx()
+    _receive_request(validator, ctx)
+    validator.validate_complete(ctx)
+    assert_violation(ctx, "HF-001")
+
+
+def test_hf001_response_start_sent_passes(validator: HTTPFSMValidator) -> None:
+    ctx = make_http_ctx()
+    _receive_request(validator, ctx)
+    _send_response_start(validator, ctx)
+    _send_response_body(validator, ctx)
+    validator.validate_complete(ctx)
+    matching = [v for v in ctx.violations if v.rule_id == "HF-001"]
+    assert matching == []
+
+
+def test_hf001_disconnected_no_violation(validator: HTTPFSMValidator) -> None:
+    ctx = make_http_ctx()
+    _receive_request(validator, ctx)
+    _receive_disconnect(validator, ctx)
+    validator.validate_complete(ctx)
+    matching = [v for v in ctx.violations if v.rule_id == "HF-001"]
+    assert matching == []
+
+
+def test_hf009_receive_after_request_body_complete(validator: HTTPFSMValidator) -> None:
+    ctx = make_http_ctx()
+    _receive_request(validator, ctx, more_body=False)
+    _receive_request(validator, ctx)
+    v = assert_violation(ctx, "HF-009")
+    assert v.severity == "info"
+
+
+def test_hf009_chunked_request_then_extra_receive(validator: HTTPFSMValidator) -> None:
+    ctx = make_http_ctx()
+    _receive_request(validator, ctx, more_body=True)
+    _receive_request(validator, ctx, more_body=False)
+    _receive_request(validator, ctx)
+    v = assert_violation(ctx, "HF-009")
+    assert v.severity == "info"
+
+
+def test_hf009_chunked_request_in_progress_passes(validator: HTTPFSMValidator) -> None:
+    ctx = make_http_ctx()
+    _receive_request(validator, ctx, more_body=True)
+    _receive_request(validator, ctx, more_body=True)
+    matching = [v for v in ctx.violations if v.rule_id == "HF-009"]
+    assert matching == []
+
+
 def test_phase_transitions_happy_path(validator: HTTPFSMValidator) -> None:
     ctx = make_http_ctx()
     assert ctx.http is not None

@@ -27,6 +27,7 @@ class HTTPProtocolState:
     response_status: int = 0
     response_has_trailers: bool = False
     disconnected: bool = False
+    request_body_complete: bool = False
 
 
 @dataclass

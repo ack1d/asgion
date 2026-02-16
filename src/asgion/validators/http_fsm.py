@@ -1,6 +1,17 @@
 from asgion.core._types import HTTPPhase, Message, ScopeType
 from asgion.core.context import ConnectionContext
-from asgion.rules.http_fsm import HF_003, HF_004, HF_006, HF_007, HF_008, HF_011, HF_014, HF_015
+from asgion.rules.http_fsm import (
+    HF_001,
+    HF_003,
+    HF_004,
+    HF_006,
+    HF_007,
+    HF_008,
+    HF_009,
+    HF_011,
+    HF_014,
+    HF_015,
+)
 from asgion.validators.base import BaseValidator
 
 
@@ -14,13 +25,17 @@ class HTTPFSMValidator(BaseValidator):
         if msg_type == "http.request":
             more_body = message.get("more_body", False)
 
+            if ctx.http.request_body_complete:
+                ctx.violation(HF_009)
+                return
+
             if ctx.http.phase == HTTPPhase.WAITING:
                 ctx.http.phase = HTTPPhase.REQUEST_RECEIVED
             elif ctx.http.phase == HTTPPhase.REQUEST_RECEIVED and more_body:
                 pass  # Chunked body, stay in REQUEST_RECEIVED
 
             if not more_body:
-                pass
+                ctx.http.request_body_complete = True
 
         elif msg_type == "http.disconnect":
             ctx.http.disconnected = True
@@ -42,11 +57,14 @@ class HTTPFSMValidator(BaseValidator):
             return
         assert ctx.http is not None
 
-        if (
-            ctx.http.phase not in (HTTPPhase.COMPLETED, HTTPPhase.DISCONNECTED)
-            and ctx.http.response_start_count > 0
-            and not ctx.http.body_complete
-        ):
+        if ctx.http.phase == HTTPPhase.DISCONNECTED:
+            return
+
+        if ctx.http.response_start_count == 0:
+            ctx.violation(HF_001)
+            return
+
+        if not ctx.http.body_complete:
             ctx.violation(HF_008)
 
     def _validate_response_start(self, ctx: ConnectionContext, message: Message) -> None:

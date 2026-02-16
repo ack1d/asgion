@@ -4,6 +4,14 @@ from asgion.core.rule import Rule
 _LAYER = "http.fsm"
 _SCOPES = ("http",)
 
+HF_001 = Rule(
+    "HF-001",
+    Severity.ERROR,
+    "http.response.start was never sent",
+    hint="Application must send exactly one http.response.start per request",
+    layer=_LAYER,
+    scope_types=_SCOPES,
+)
 HF_003 = Rule(
     "HF-003",
     Severity.ERROR,
@@ -41,6 +49,14 @@ HF_008 = Rule(
     Severity.INFO,
     "App exited without completing response body",
     hint="Ensure http.response.body with more_body=False is sent",
+    layer=_LAYER,
+    scope_types=_SCOPES,
+)
+HF_009 = Rule(
+    "HF-009",
+    Severity.INFO,
+    "Received http.request after body was already complete",
+    hint="After more_body=False, further receives return http.disconnect",
     layer=_LAYER,
     scope_types=_SCOPES,
 )

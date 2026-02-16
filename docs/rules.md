@@ -6,7 +6,7 @@ All validation rules that Asgion checks, grouped by protocol layer.
 
 Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asgiref](https://github.com/django/asgiref)).
 
-**Total: 75 rules**
+**Total: 77 rules**
 
 | Severity | Meaning |
 |----------|---------|
@@ -67,11 +67,13 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 
 | ID | Severity | Summary | Hint |
 |----|----------|---------|------|
+| `HF-001` | error | http.response.start was never sent | Application must send exactly one http.response.start per request |
 | `HF-003` | error | http.response.body sent without preceding http.response.start | Send http.response.start before any http.response.body |
 | `HF-004` | error | Duplicate http.response.start | http.response.start must be sent exactly once per request |
 | `HF-006` | error | http.response.body sent after response was already completed | Do not send body after more_body=False |
 | `HF-007` | error | Send after client disconnected | Check for http.disconnect before sending response |
 | `HF-008` | info | App exited without completing response body | Ensure http.response.body with more_body=False is sent |
+| `HF-009` | info | Received http.request after body was already complete | After more_body=False, further receives return http.disconnect |
 | `HF-011` | error | Trailers sent without trailers=True in response.start | Set trailers=True in http.response.start to use trailer headers |
 | `HF-014` | warning | HEAD request response has non-empty body | HEAD responses must not include a body |
 | `HF-015` | warning | Response has body when status code forbids it | 1xx/204/304 responses must not include a body |
