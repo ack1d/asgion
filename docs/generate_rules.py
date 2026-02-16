@@ -10,16 +10,24 @@ _ASGI_LIFESPAN = "https://asgi.readthedocs.io/en/latest/specs/lifespan.html"
 
 LAYER_TITLES = {
     "general": "General ASGI (Layer 0)",
+    "http.scope": "HTTP Scope Fields (Layer 1)",
+    "ws.scope": "WebSocket Scope Fields (Layer 2)",
+    "lifespan.scope": "Lifespan Scope Fields (Layer 3)",
     "http.events": "HTTP Events (Layer 4)",
     "http.fsm": "HTTP State Machine (Layer 7)",
     "ws.events": "WebSocket Events (Layer 5)",
     "ws.fsm": "WebSocket State Machine (Layer 8)",
     "lifespan.events": "Lifespan Events (Layer 6)",
     "lifespan.fsm": "Lifespan State Machine (Layer 9)",
+    "extension": "Extensions (Layer 10)",
+    "semantic": "Semantic (Layer 11)",
 }
 
 LAYER_SPEC_REFS: dict[str, str] = {
     "general": _ASGI_MAIN,
+    "http.scope": _ASGI_HTTP,
+    "ws.scope": _ASGI_WS,
+    "lifespan.scope": _ASGI_LIFESPAN,
     "http.events": _ASGI_HTTP,
     "http.fsm": _ASGI_HTTP,
     "ws.events": _ASGI_WS,
@@ -30,12 +38,17 @@ LAYER_SPEC_REFS: dict[str, str] = {
 
 LAYER_ORDER = [
     "general",
+    "http.scope",
+    "ws.scope",
+    "lifespan.scope",
     "http.events",
     "http.fsm",
     "ws.events",
     "ws.fsm",
     "lifespan.events",
     "lifespan.fsm",
+    "extension",
+    "semantic",
 ]
 
 

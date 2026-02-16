@@ -513,12 +513,122 @@ def test_lifespan_spec_compiles() -> None:
 def test_all_specs_total_rules() -> None:
     from asgion.spec import SPEC_RULES
 
-    assert len(SPEC_RULES) == 34
+    assert len(SPEC_RULES) == 47
 
 
 def test_rule_layer_metadata() -> None:
     from asgion.spec import SPEC_RULES
 
     for rule in SPEC_RULES.values():
-        assert rule.layer in ("http.events", "ws.events", "lifespan.events")
+        assert rule.layer in ("http.events", "http.scope", "ws.events", "lifespan.events")
         assert len(rule.scope_types) > 0
+
+
+# --- Scope checks ---
+
+
+def test_compile_empty_scope_checks() -> None:
+    spec = _make_spec()
+    compiled = compile_spec(spec)
+    assert compiled.scope_fns == ()
+
+
+def test_compile_scope_checks_field_required() -> None:
+    spec = _make_spec(
+        scope_checks=(FieldRequired("type", "TS-001"),),
+        scope_layer="test.scope",
+    )
+    compiled = compile_spec(spec)
+    assert len(compiled.scope_fns) == 1
+    assert "TS-001" in compiled.rules
+
+    ctx = _make_ctx()
+    for fn in compiled.scope_fns:
+        fn(ctx, {"not_type": "http"})
+    assert_violation(ctx, "TS-001")
+
+
+def test_compile_scope_checks_field_required_passes() -> None:
+    spec = _make_spec(
+        scope_checks=(FieldRequired("type", "TS-001"),),
+        scope_layer="test.scope",
+    )
+    compiled = compile_spec(spec)
+    ctx = _make_ctx()
+    for fn in compiled.scope_fns:
+        fn(ctx, {"type": "http"})
+    assert_no_violations(ctx)
+
+
+def test_compile_scope_checks_field_type() -> None:
+    spec = _make_spec(
+        scope_checks=(FieldType("type", str, "TS-002"),),
+        scope_layer="test.scope",
+    )
+    compiled = compile_spec(spec)
+    ctx = _make_ctx()
+    for fn in compiled.scope_fns:
+        fn(ctx, {"type": 123})
+    assert_violation(ctx, "TS-002")
+
+
+def test_compile_scope_checks_field_value() -> None:
+    def _check_type(v: str) -> str | None:
+        return None if v == "http" else f"Expected 'http', got '{v}'"
+
+    spec = _make_spec(
+        scope_checks=(FieldValue("type", _check_type, "TS-003"),),
+        scope_layer="test.scope",
+    )
+    compiled = compile_spec(spec)
+    ctx = _make_ctx()
+    for fn in compiled.scope_fns:
+        fn(ctx, {"type": "wrong"})
+    assert_violation(ctx, "TS-003")
+
+
+def test_compile_scope_checks_uses_scope_layer() -> None:
+    spec = _make_spec(
+        scope_checks=(FieldRequired("type", "TS-001"),),
+        scope_layer="test.scope",
+    )
+    compiled = compile_spec(spec)
+    rule = compiled.rules["TS-001"]
+    assert rule.layer == "test.scope"
+
+
+def test_compile_scope_checks_fallback_layer() -> None:
+    spec = _make_spec(
+        scope_checks=(FieldRequired("type", "TS-001"),),
+    )
+    compiled = compile_spec(spec)
+    rule = compiled.rules["TS-001"]
+    assert rule.layer == "test.events"
+
+
+def test_compile_scope_checks_multiple() -> None:
+    spec = _make_spec(
+        scope_checks=(
+            FieldRequired("type", "TS-001"),
+            FieldType("type", str, "TS-002"),
+        ),
+        scope_layer="test.scope",
+    )
+    compiled = compile_spec(spec)
+    assert len(compiled.scope_fns) == 2
+
+    ctx = _make_ctx()
+    for fn in compiled.scope_fns:
+        fn(ctx, {})
+    assert_violation(ctx, "TS-001")
+
+
+def test_compile_scope_checks_auto_summary() -> None:
+    spec = _make_spec(
+        scope_checks=(FieldRequired("type", "TS-001"),),
+        scope_layer="test.scope",
+    )
+    compiled = compile_spec(spec)
+    rule = compiled.rules["TS-001"]
+    assert "scope" in rule.summary
+    assert "type" in rule.summary

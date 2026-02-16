@@ -25,6 +25,8 @@ class ProtocolSpec:
     name: str  # "http"
     layer: str  # "http.events"
     events: tuple[EventSpec, ...]
+    scope_checks: tuple[CheckSpec, ...] = ()
+    scope_layer: str = ""
     invalid_receive_rule_id: str = ""
     invalid_receive_summary: str = ""
     invalid_receive_hint: str = ""
@@ -44,3 +46,4 @@ class CompiledSpec:
     valid_send_types: frozenset[str]
     invalid_receive_rule: Rule | None
     invalid_send_rule: Rule | None
+    scope_fns: tuple[CheckFn, ...] = ()

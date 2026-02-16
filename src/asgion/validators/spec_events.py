@@ -1,4 +1,4 @@
-from asgion.core._types import Message
+from asgion.core._types import Message, Scope
 from asgion.core.context import ConnectionContext
 from asgion.spec._protocol import CompiledSpec
 from asgion.validators.base import BaseValidator
@@ -12,6 +12,11 @@ class SpecEventValidator(BaseValidator):
         self._send = compiled.send_dispatch
         self._invalid_receive = compiled.invalid_receive_rule
         self._invalid_send = compiled.invalid_send_rule
+        self._scope_fns = compiled.scope_fns
+
+    def validate_scope(self, ctx: ConnectionContext, scope: Scope) -> None:
+        for check in self._scope_fns:
+            check(ctx, scope)
 
     def validate_receive(self, ctx: ConnectionContext, message: Message) -> None:
         msg_type = message.get("type", "")

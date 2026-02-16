@@ -6,7 +6,7 @@ All validation rules that Asgion checks, grouped by protocol layer.
 
 Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asgiref](https://github.com/django/asgiref)).
 
-**Total: 82 rules**
+**Total: 95 rules**
 
 | Severity | Meaning |
 |----------|---------|
@@ -41,6 +41,25 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 | `G-012` | error | asgi['version'] must be '2.0' or '3.0' | - |
 | `G-013` | warning | asgi['spec_version'] should be a str | - |
 | `G-014` | warning | Message nesting exceeds maximum depth | - |
+
+## HTTP Scope Fields (Layer 1)
+> Spec: <https://asgi.readthedocs.io/en/latest/specs/www.html>
+
+| ID | Severity | Summary | Hint |
+|----|----------|---------|------|
+| `HS-001` | error | Scope type is not 'http' | - |
+| `HS-002` | error | scope missing 'http_version' field | - |
+| `HS-003` | error | scope['http_version'] must be str | - |
+| `HS-004` | warning | Unknown HTTP version in scope | Expected one of: 1.0, 1.1, 2, 3 |
+| `HS-005` | error | scope missing 'method' field | - |
+| `HS-006` | error | scope['method'] must be str | - |
+| `HS-007` | warning | HTTP method should be uppercase | - |
+| `HS-008` | error | scope missing 'scheme' field | - |
+| `HS-009` | error | scope['scheme'] must be str | - |
+| `HS-010` | warning | Unknown HTTP scheme | Expected 'http' or 'https' |
+| `HS-011` | error | scope missing 'path' field | - |
+| `HS-012` | error | scope['path'] must be str | - |
+| `HS-013` | warning | HTTP path should start with '/' | - |
 
 ## HTTP Events (Layer 4)
 > Spec: <https://asgi.readthedocs.io/en/latest/specs/www.html>

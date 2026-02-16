@@ -55,6 +55,13 @@ def compile_spec(spec: ProtocolSpec) -> CompiledSpec:
         rules,
     )
 
+    # Scope checks
+    scope_layer = spec.scope_layer or spec.layer
+    scope_fns: list[CheckFn] = []
+    for check in spec.scope_checks:
+        fn = _compile_check(check, "scope", scope_layer, spec.name, rules)
+        scope_fns.append(fn)
+
     return CompiledSpec(
         rules=rules,
         receive_dispatch={k: tuple(v) for k, v in receive_dispatch.items()},
@@ -63,6 +70,7 @@ def compile_spec(spec: ProtocolSpec) -> CompiledSpec:
         valid_send_types=send_types,
         invalid_receive_rule=invalid_receive_rule,
         invalid_send_rule=invalid_send_rule,
+        scope_fns=tuple(scope_fns),
     )
 
 
