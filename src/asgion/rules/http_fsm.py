@@ -76,6 +76,14 @@ HF_011 = Rule(
     layer=_LAYER,
     scope_types=_SCOPES,
 )
+HF_012 = Rule(
+    "HF-012",
+    Severity.INFO,
+    "Streaming response body (more_body=True)",
+    hint="Application is sending chunked response body",
+    layer=_LAYER,
+    scope_types=_SCOPES,
+)
 HF_014 = Rule(
     "HF-014",
     Severity.WARNING,

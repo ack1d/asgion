@@ -87,7 +87,9 @@ def test_happy_path_chunked_response(validator: HTTPFSMValidator) -> None:
     _send_response_body(validator, ctx, body=b"chunk1", more_body=True)
     _send_response_body(validator, ctx, body=b"chunk2", more_body=False)
     validator.validate_complete(ctx)
-    assert_no_violations(ctx)
+    # Only HF-012 (info: streaming) is expected
+    non_info = [v for v in ctx.violations if v.rule_id != "HF-012"]
+    assert non_info == []
 
 
 def test_happy_path_with_trailers(validator: HTTPFSMValidator) -> None:
@@ -389,6 +391,27 @@ def test_hf009_chunked_request_in_progress_passes(validator: HTTPFSMValidator) -
     _receive_request(validator, ctx, more_body=True)
     _receive_request(validator, ctx, more_body=True)
     matching = [v for v in ctx.violations if v.rule_id == "HF-009"]
+    assert matching == []
+
+
+def test_hf012_streaming_body_fires_once(validator: HTTPFSMValidator) -> None:
+    ctx = make_http_ctx()
+    _receive_request(validator, ctx)
+    _send_response_start(validator, ctx)
+    _send_response_body(validator, ctx, body=b"chunk1", more_body=True)
+    _send_response_body(validator, ctx, body=b"chunk2", more_body=True)
+    _send_response_body(validator, ctx, body=b"chunk3", more_body=False)
+    matching = [v for v in ctx.violations if v.rule_id == "HF-012"]
+    assert len(matching) == 1
+    assert matching[0].severity == "info"
+
+
+def test_hf012_no_streaming_passes(validator: HTTPFSMValidator) -> None:
+    ctx = make_http_ctx()
+    _receive_request(validator, ctx)
+    _send_response_start(validator, ctx)
+    _send_response_body(validator, ctx, body=b"full body", more_body=False)
+    matching = [v for v in ctx.violations if v.rule_id == "HF-012"]
     assert matching == []
 
 

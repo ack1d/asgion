@@ -10,6 +10,7 @@ from asgion.rules.http_fsm import (
     HF_009,
     HF_010,
     HF_011,
+    HF_012,
     HF_014,
     HF_015,
 )
@@ -122,6 +123,11 @@ class HTTPFSMValidator(BaseValidator):
         ctx.http.body_chunks_sent += 1
         ctx.http.total_body_bytes += body_len
         ctx.http.phase = HTTPPhase.RESPONSE_BODY
+
+        if more_body:
+            if ctx.http.body_chunks_sent == 1:
+                ctx.violation(HF_012)
+            return
 
         if not more_body:
             ctx.http.body_complete = True

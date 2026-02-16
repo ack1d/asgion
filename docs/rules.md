@@ -6,7 +6,7 @@ All validation rules that Asgion checks, grouped by protocol layer.
 
 Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asgiref](https://github.com/django/asgiref)).
 
-**Total: 78 rules**
+**Total: 79 rules**
 
 | Severity | Meaning |
 |----------|---------|
@@ -76,6 +76,7 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 | `HF-009` | info | Received http.request after body was already complete | After more_body=False, further receives return http.disconnect |
 | `HF-010` | error | trailers=True in response.start but no http.response.trailers sent | Send http.response.trailers after the final response body |
 | `HF-011` | error | Trailers sent without trailers=True in response.start | Set trailers=True in http.response.start to use trailer headers |
+| `HF-012` | info | Streaming response body (more_body=True) | Application is sending chunked response body |
 | `HF-014` | warning | HEAD request response has non-empty body | HEAD responses must not include a body |
 | `HF-015` | warning | Response has body when status code forbids it | 1xx/204/304 responses must not include a body |
 
