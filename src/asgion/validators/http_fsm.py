@@ -8,6 +8,7 @@ from asgion.rules.http_fsm import (
     HF_007,
     HF_008,
     HF_009,
+    HF_010,
     HF_011,
     HF_014,
     HF_015,
@@ -66,6 +67,10 @@ class HTTPFSMValidator(BaseValidator):
 
         if not ctx.http.body_complete:
             ctx.violation(HF_008)
+            return
+
+        if ctx.http.response_has_trailers and not ctx.http.trailers_sent:
+            ctx.violation(HF_010)
 
     def _validate_response_start(self, ctx: ConnectionContext, message: Message) -> None:
         assert ctx.http is not None
@@ -138,6 +143,7 @@ class HTTPFSMValidator(BaseValidator):
 
     def _validate_trailers(self, ctx: ConnectionContext, _message: Message) -> None:
         assert ctx.http is not None
+        ctx.http.trailers_sent = True
 
         if not ctx.http.response_has_trailers:
             ctx.violation(HF_011)

@@ -60,6 +60,14 @@ HF_009 = Rule(
     layer=_LAYER,
     scope_types=_SCOPES,
 )
+HF_010 = Rule(
+    "HF-010",
+    Severity.ERROR,
+    "trailers=True in response.start but no http.response.trailers sent",
+    hint="Send http.response.trailers after the final response body",
+    layer=_LAYER,
+    scope_types=_SCOPES,
+)
 HF_011 = Rule(
     "HF-011",
     Severity.ERROR,

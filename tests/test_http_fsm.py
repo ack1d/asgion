@@ -223,6 +223,36 @@ def test_hf008_disconnected_before_body_passes(validator: HTTPFSMValidator) -> N
     assert matching == []
 
 
+def test_hf010_trailers_flag_but_no_trailers_sent(validator: HTTPFSMValidator) -> None:
+    ctx = make_http_ctx()
+    _receive_request(validator, ctx)
+    _send_response_start(validator, ctx, trailers=True)
+    _send_response_body(validator, ctx)
+    validator.validate_complete(ctx)
+    assert_violation(ctx, "HF-010")
+
+
+def test_hf010_trailers_flag_with_trailers_passes(validator: HTTPFSMValidator) -> None:
+    ctx = make_http_ctx()
+    _receive_request(validator, ctx)
+    _send_response_start(validator, ctx, trailers=True)
+    _send_response_body(validator, ctx)
+    _send_trailers(validator, ctx)
+    validator.validate_complete(ctx)
+    matching = [v for v in ctx.violations if v.rule_id == "HF-010"]
+    assert matching == []
+
+
+def test_hf010_no_trailers_flag_passes(validator: HTTPFSMValidator) -> None:
+    ctx = make_http_ctx()
+    _receive_request(validator, ctx)
+    _send_response_start(validator, ctx, trailers=False)
+    _send_response_body(validator, ctx)
+    validator.validate_complete(ctx)
+    matching = [v for v in ctx.violations if v.rule_id == "HF-010"]
+    assert matching == []
+
+
 def test_hf011_trailers_without_flag(validator: HTTPFSMValidator) -> None:
     ctx = make_http_ctx()
     _receive_request(validator, ctx)
