@@ -6,7 +6,7 @@ All validation rules that Asgion checks, grouped by protocol layer.
 
 Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asgiref](https://github.com/django/asgiref)).
 
-**Total: 135 rules**
+**Total: 139 rules**
 
 | Severity | Meaning |
 |----------|---------|
@@ -106,6 +106,16 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 | `WS-023` | error | Invalid server format in WebSocket scope | - |
 | `WS-024` | error | Invalid extensions type in WebSocket scope | - |
 | `WS-025` | error | Invalid state type in WebSocket scope | - |
+
+## Lifespan Scope Fields (Layer 3)
+> Spec: <https://asgi.readthedocs.io/en/latest/specs/lifespan.html>
+
+| ID | Severity | Summary | Hint |
+|----|----------|---------|------|
+| `LS-001` | error | Scope type is not 'lifespan' | - |
+| `LS-002` | error | scope missing 'asgi' field | - |
+| `LS-003` | error | scope['asgi'] must be dict | - |
+| `LS-004` | error | Invalid state type in lifespan scope | - |
 
 ## HTTP Events (Layer 4)
 > Spec: <https://asgi.readthedocs.io/en/latest/specs/www.html>
