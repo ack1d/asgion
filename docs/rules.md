@@ -6,7 +6,7 @@ All validation rules that Asgion checks, grouped by protocol layer.
 
 Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asgiref](https://github.com/django/asgiref)).
 
-**Total: 139 rules**
+**Total: 148 rules**
 
 | Severity | Meaning |
 |----------|---------|
@@ -122,6 +122,14 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 
 | ID | Severity | Summary | Hint |
 |----|----------|---------|------|
+| `EX-001` | error | http.response.push missing 'path' field | - |
+| `EX-002` | error | http.response.push['path'] must be str | - |
+| `EX-003` | error | http.response.push headers format invalid | - |
+| `EX-004` | error | http.response.zerocopysend missing 'file' field | - |
+| `EX-005` | error | http.response.pathsend missing 'path' field | - |
+| `EX-006` | error | http.response.pathsend['path'] must be str | - |
+| `EX-007` | error | http.response.early_hint headers format invalid | - |
+| `EX-008` | error | http.response.debug['info'] must be dict | - |
 | `HE-001` | error | http.request missing 'body' field | - |
 | `HE-002` | error | http.request['body'] must be bytes | - |
 | `HE-003` | warning | http.request['more_body'] should be bool | - |
@@ -136,6 +144,7 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 | `HE-017` | error | http.response.body['body'] must be bytes | - |
 | `HE-018` | warning | http.response.body['more_body'] should be bool | - |
 | `HE-019` | error | Invalid HTTP send event type | Expected one of: http.response.body, http.response.debug, http.response.early_hint, http.response.pathsend, http.response.push, http.response.start, http.response.trailers, http.response.zerocopysend |
+| `HE-020` | error | http.response.trailers headers format invalid | - |
 
 ## HTTP State Machine (Layer 7)
 > Spec: <https://asgi.readthedocs.io/en/latest/specs/www.html>

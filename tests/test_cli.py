@@ -250,7 +250,7 @@ class TestCLI:
         for line in result.output.splitlines():
             if line.startswith("  ") and line[2:].strip() and line[2:].strip()[0].isalpha():
                 rule_id = line.split()[0]
-                assert rule_id.startswith(("HE-", "HF-")), rule_id
+                assert rule_id.startswith(("HE-", "HF-", "HS-", "EX-")), rule_id
 
     def test_rules_severity_filter(self) -> None:
         runner = CliRunner()

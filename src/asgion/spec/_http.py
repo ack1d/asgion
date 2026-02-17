@@ -238,11 +238,50 @@ HTTP_SPEC = ProtocolSpec(
                 FieldType("more_body", bool, "HE-018", severity=Severity.WARNING),
             ),
         ),
-        EventSpec("http.response.trailers", "send"),
-        EventSpec("http.response.push", "send"),
-        EventSpec("http.response.zerocopysend", "send"),
-        EventSpec("http.response.pathsend", "send"),
-        EventSpec("http.response.early_hint", "send"),
-        EventSpec("http.response.debug", "send"),
+        EventSpec(
+            "http.response.trailers",
+            "send",
+            checks=(
+                HeadersFormat("headers", "HE-020"),
+            ),
+        ),
+        EventSpec(
+            "http.response.push",
+            "send",
+            checks=(
+                FieldRequired("path", "EX-001"),
+                FieldType("path", str, "EX-002"),
+                HeadersFormat("headers", "EX-003"),
+            ),
+        ),
+        EventSpec(
+            "http.response.zerocopysend",
+            "send",
+            checks=(
+                FieldRequired("file", "EX-004"),
+            ),
+        ),
+        EventSpec(
+            "http.response.pathsend",
+            "send",
+            checks=(
+                FieldRequired("path", "EX-005"),
+                FieldType("path", str, "EX-006"),
+            ),
+        ),
+        EventSpec(
+            "http.response.early_hint",
+            "send",
+            checks=(
+                HeadersFormat("headers", "EX-007"),
+            ),
+        ),
+        EventSpec(
+            "http.response.debug",
+            "send",
+            checks=(
+                FieldType("info", dict, "EX-008"),
+            ),
+        ),
     ),
 )
