@@ -1,7 +1,13 @@
 """Base validator interface and registry."""
 
-from asgion.core._types import Message, Scope
-from asgion.core.context import ConnectionContext
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from asgion.core._types import Message, Scope
+    from asgion.core.config import AsgionConfig
+    from asgion.core.context import ConnectionContext
 
 
 class BaseValidator:
@@ -55,7 +61,7 @@ class ValidatorRegistry:
         return [*self._global, *specific]
 
 
-def create_default_registry() -> ValidatorRegistry:
+def create_default_registry(config: AsgionConfig | None = None) -> ValidatorRegistry:
     """Create a registry with all built-in validators."""
     from asgion.spec import ALL_SPECS
     from asgion.validators.extension import ExtensionValidator
@@ -85,6 +91,6 @@ def create_default_registry() -> ValidatorRegistry:
     # Layer 11: Semantic validator
     from asgion.validators.semantic import SemanticValidator
 
-    registry.register(SemanticValidator(), scope_types=["http"])
+    registry.register(SemanticValidator(config=config), scope_types=["http"])
 
     return registry

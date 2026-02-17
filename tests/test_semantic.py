@@ -2,8 +2,8 @@ import time
 
 import pytest
 
+from asgion.core.config import AsgionConfig
 from asgion.core.context import ConnectionContext
-from asgion.validators import semantic as sem_mod
 from asgion.validators.semantic import SemanticValidator
 from tests.conftest import assert_no_violations, assert_violation, make_http_ctx
 
@@ -520,13 +520,14 @@ def test_validate_send_sets_response_timestamp(validator: SemanticValidator) -> 
     assert ctx.http.response_started_at is not None
 
 
-# --- Threshold module-level constants can be overridden ---
+# --- Thresholds are configurable via AsgionConfig ---
 
 
-def test_threshold_override(validator: SemanticValidator, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_threshold_override_via_config() -> None:
+    cfg = AsgionConfig(body_size_threshold=100)
+    validator = SemanticValidator(config=cfg)
     ctx = make_http_ctx()
     assert ctx.http is not None
     ctx.http.total_body_bytes = 500
-    monkeypatch.setattr(sem_mod, "BODY_SIZE_THRESHOLD", 100)
     validator.validate_complete(ctx)
     assert_violation(ctx, "SEM-008")

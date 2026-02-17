@@ -8,6 +8,7 @@ from asgion.core._types import SEVERITY_LEVEL, Message, Scope, Severity
 from asgion.core.wrapper import inspect
 
 if TYPE_CHECKING:
+    from asgion.core.config import AsgionConfig
     from asgion.core.violation import Violation
 
 _TIMEOUT = 5.0
@@ -42,6 +43,7 @@ class CheckReport:
 async def _run_lifespan(
     app: object,
     *,
+    config: AsgionConfig | None = None,
     exclude_rules: set[str] | None = None,
 ) -> CheckResult:
     violations: list[Violation] = []
@@ -66,7 +68,12 @@ async def _run_lifespan(
         if msg_type in ("lifespan.startup.complete", "lifespan.startup.failed"):
             phase = "shutdown"
 
-    wrapped = inspect(app, on_violation=violations.append, exclude_rules=exclude_rules)  # type: ignore[arg-type]
+    wrapped = inspect(
+        app,  # type: ignore[arg-type]
+        config=config,
+        on_violation=violations.append,
+        exclude_rules=exclude_rules,
+    )
     result = CheckResult(scope_type="lifespan")
     try:
         await asyncio.wait_for(wrapped(scope, receive, send), timeout=_TIMEOUT)
@@ -83,6 +90,7 @@ async def _run_http(
     *,
     path: str = "/",
     method: str = "GET",
+    config: AsgionConfig | None = None,
     exclude_rules: set[str] | None = None,
 ) -> CheckResult:
     violations: list[Violation] = []
@@ -112,7 +120,12 @@ async def _run_http(
     async def send(message: Message) -> None:
         pass
 
-    wrapped = inspect(app, on_violation=violations.append, exclude_rules=exclude_rules)  # type: ignore[arg-type]
+    wrapped = inspect(
+        app,  # type: ignore[arg-type]
+        config=config,
+        on_violation=violations.append,
+        exclude_rules=exclude_rules,
+    )
     result = CheckResult(scope_type="http", path=path, method=method)
     try:
         await asyncio.wait_for(wrapped(scope, receive, send), timeout=_TIMEOUT)
@@ -129,6 +142,7 @@ def run_check(
     *,
     app_path: str,
     urls: tuple[str, ...] = ("/",),
+    config: AsgionConfig | None = None,
     exclude_rules: set[str] | None = None,
     run_lifespan: bool = True,
 ) -> CheckReport:
@@ -138,9 +152,11 @@ def run_check(
 
     async def _run() -> None:
         if run_lifespan:
-            report.results.append(await _run_lifespan(app, exclude_rules=_excluded))
+            report.results.append(await _run_lifespan(app, config=config, exclude_rules=_excluded))
         for url in urls:
-            report.results.append(await _run_http(app, path=url, exclude_rules=_excluded))
+            report.results.append(
+                await _run_http(app, path=url, config=config, exclude_rules=_excluded)
+            )
 
     asyncio.run(_run())
     return report

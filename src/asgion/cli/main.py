@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import sys
 
 import click
@@ -16,6 +17,7 @@ from asgion.cli._output import (
 )
 from asgion.cli._runner import run_check
 from asgion.core._types import Severity
+from asgion.core.config import BUILTIN_PROFILES, AsgionConfig, ConfigError, load_config
 from asgion.rules import ALL_RULES
 
 
@@ -45,6 +47,19 @@ def cli() -> None:
 )
 @click.option("--no-color", is_flag=True, envvar="NO_COLOR", help="Disable ANSI colors.")
 @click.option("--no-lifespan", is_flag=True, help="Skip lifespan checks.")
+@click.option(
+    "--config",
+    "config_path",
+    default=None,
+    type=click.Path(exists=False),
+    help="Path to .asgion.toml or pyproject.toml config file.",
+)
+@click.option(
+    "--profile",
+    type=click.Choice(list(BUILTIN_PROFILES)),
+    default=None,
+    help="Rule filter profile (overrides config file profile).",
+)
 def check(
     app_path: str,
     url: tuple[str, ...],
@@ -54,6 +69,8 @@ def check(
     min_severity: str,
     no_color: bool,
     no_lifespan: bool,
+    config_path: str | None,
+    profile: str | None,
 ) -> None:
     """Check an ASGI app for protocol violations."""
     try:
@@ -62,6 +79,24 @@ def check(
         click.echo(f"Error: {exc}", err=True)
         sys.exit(2)
 
+    try:
+        config: AsgionConfig = load_config(config_path)
+    except ConfigError as exc:
+        click.echo(f"Error: invalid config: {exc}", err=True)
+        sys.exit(2)
+
+    if profile is not None:
+        base = BUILTIN_PROFILES[profile]
+        # CLI --profile overrides filter settings; preserve thresholds and
+        # merge exclude_rules (config file exclusions are additive).
+        config = dataclasses.replace(
+            config,
+            min_severity=base.min_severity,
+            include_rules=base.include_rules,
+            categories=base.categories,
+            exclude_rules=base.exclude_rules | config.exclude_rules,
+        )
+
     excluded = {r.strip() for r in exclude_rules.split(",") if r.strip()} if exclude_rules else None
     severity = Severity(min_severity)
 
@@ -69,6 +104,7 @@ def check(
         app,
         app_path=app_path,
         urls=url,
+        config=config,
         exclude_rules=excluded,
         run_lifespan=not no_lifespan,
     )

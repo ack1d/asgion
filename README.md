@@ -73,6 +73,8 @@ Check an ASGI app for protocol violations.
 | `--format text\|json` | Output format (default `text`) |
 | `--exclude-rules IDS` | Comma-separated rule IDs to skip |
 | `--min-severity LEVEL` | Minimum severity: `perf`, `info`, `warning`, `error` |
+| `--config FILE` | Path to `.asgion.toml` or `pyproject.toml` |
+| `--profile PROFILE` | Rule filter profile: `strict`, `recommended`, `minimal` |
 | `--no-color` | Disable ANSI colors (also respects `NO_COLOR` env) |
 | `--no-lifespan` | Skip lifespan startup/shutdown checks |
 
@@ -100,15 +102,29 @@ Print version and exit.
 ## Python API
 
 ```python
-from asgion import inspect
+from asgion import AsgionConfig, inspect
+
+cfg = AsgionConfig(
+    min_severity="warning",                # skip perf/info rules
+    exclude_rules={"HE-012", "G-008"},     # suppress specific rules
+    ttfb_threshold=2.0,                    # custom TTFB threshold (seconds)
+)
 
 wrapped = inspect(
     app,
+    config=cfg,
     strict=False,                          # True to raise on violations
     on_violation=lambda v: print(v),       # real-time callback
     exclude_paths=["/health", "/metrics"], # skip these paths
-    exclude_rules={"HE-012", "G-008"},     # suppress specific rules
 )
+```
+
+Or select a built-in profile:
+
+```python
+from asgion import BUILTIN_PROFILES, inspect
+
+app = inspect(app, config=BUILTIN_PROFILES["recommended"])  # warning+ only
 ```
 
 ### Parameters
@@ -116,11 +132,27 @@ wrapped = inspect(
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `app` | `ASGIApp` | required | The ASGI application to wrap |
+| `config` | `AsgionConfig` | `None` | Rule filter settings and thresholds |
 | `strict` | `bool` | `False` | Raise `ASGIProtocolError` on any violation |
 | `on_violation` | callback | `None` | Called with each `Violation` in real-time |
 | `exclude_paths` | `list[str]` | `None` | Paths to skip validation |
-| `exclude_rules` | `set[str]` | `None` | Rule IDs to suppress |
+| `exclude_rules` | `set[str]` | `None` | Rule IDs to suppress (additive to config) |
 | `registry` | `ValidatorRegistry` | `None` | Custom validator registry |
+
+### AsgionConfig
+
+Can also be loaded from `pyproject.toml` or `.asgion.toml`:
+
+```toml
+[tool.asgion]
+profile = "recommended"       # base profile: strict / recommended / minimal
+exclude_rules = ["SEM-006"]   # suppress specific rules (supports globs: "SEM-*")
+include_rules = ["HF-*"]      # allowlist — only these rules fire
+categories = ["http.fsm"]     # filter by layer prefix
+ttfb_threshold = 2.0          # SEM-006: TTFB limit (seconds)
+lifecycle_threshold = 30.0    # SEM-007: total connection time (seconds)
+body_size_threshold = 10485760  # SEM-008: response size (bytes)
+```
 
 ### Violation
 

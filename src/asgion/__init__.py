@@ -1,4 +1,5 @@
 from asgion.core._types import Severity
+from asgion.core.config import BUILTIN_PROFILES, AsgionConfig, ConfigError
 from asgion.core.context import ConnectionContext
 from asgion.core.rule import Rule
 from asgion.core.violation import ASGIProtocolError, Violation
@@ -9,8 +10,11 @@ __version__ = "0.2.0"
 
 
 __all__ = [
+    "BUILTIN_PROFILES",
     "ASGIProtocolError",
+    "AsgionConfig",
     "BaseValidator",
+    "ConfigError",
     "ConnectionContext",
     "Rule",
     "Severity",

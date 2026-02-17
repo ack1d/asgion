@@ -166,7 +166,7 @@ class TestOnViolationCallback:
                 "http_version": "1.1",
             },
             _on_violation=captured.append,
-            _disabled_rules=frozenset({"CTX-001"}),
+            _rule_allowed=lambda rule: rule.id != "CTX-001",
         )
         ctx.violation(_RULE)
         assert captured == []

@@ -13,6 +13,7 @@ from asgion.core.rule import Rule
 from asgion.core.violation import Violation
 
 type ViolationCallback = Callable[[Violation], Any]
+type RuleFilter = Callable[[Rule], bool]
 
 
 @dataclass
@@ -87,7 +88,7 @@ class ConnectionContext:
 
     events: list[dict[str, Any]] = field(default_factory=list)
 
-    _disabled_rules: frozenset[str] = field(default_factory=frozenset)
+    _rule_allowed: RuleFilter | None = None
     _on_violation: ViolationCallback | None = None
 
     def __post_init__(self) -> None:
@@ -120,7 +121,7 @@ class ConnectionContext:
             **extra: Additional context data for debugging.
 
         """
-        if rule.id in self._disabled_rules:
+        if self._rule_allowed is not None and not self._rule_allowed(rule):
             return
 
         v = Violation(

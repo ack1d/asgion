@@ -2,6 +2,7 @@ import contextlib
 import time
 
 from asgion.core._types import Message, ScopeType
+from asgion.core.config import AsgionConfig
 from asgion.core.context import ConnectionContext
 from asgion.rules.semantic import (
     SEM_001,
@@ -20,17 +21,12 @@ from asgion.validators.base import BaseValidator
 
 _NO_BODY_STATUSES = frozenset({204, 304}) | frozenset(range(100, 200))
 
-# Perf thresholds (seconds / bytes)
-TTFB_THRESHOLD: float = 5.0
-LIFECYCLE_THRESHOLD: float = 30.0
-BODY_SIZE_THRESHOLD: int = 10 * 1024 * 1024  # 10 MB
-BUFFER_CHUNK_THRESHOLD: int = 1 * 1024 * 1024  # 1 MB
-BODY_DELIVERY_THRESHOLD: float = 10.0
-CHUNK_COUNT_THRESHOLD: int = 100
-
 
 class SemanticValidator(BaseValidator):
     """Validates semantic HTTP correctness beyond protocol state machine."""
+
+    def __init__(self, config: AsgionConfig | None = None) -> None:
+        self._config = config or AsgionConfig()
 
     def validate_receive(self, ctx: ConnectionContext, message: Message) -> None:
         if ctx.http is None:
@@ -149,32 +145,36 @@ class SemanticValidator(BaseValidator):
         if req_at is None or resp_at is None:
             return
         ttfb = resp_at - req_at
-        if ttfb > TTFB_THRESHOLD:
-            ctx.violation(SEM_006, f"TTFB: {ttfb:.2f}s (threshold: {TTFB_THRESHOLD}s)")
+        threshold = self._config.ttfb_threshold
+        if ttfb > threshold:
+            ctx.violation(SEM_006, f"TTFB: {ttfb:.2f}s (threshold: {threshold}s)")
 
     def _check_lifecycle(self, ctx: ConnectionContext) -> None:
         elapsed = ctx.elapsed
-        if elapsed > LIFECYCLE_THRESHOLD:
+        threshold = self._config.lifecycle_threshold
+        if elapsed > threshold:
             ctx.violation(
                 SEM_007,
-                f"Total time: {elapsed:.2f}s (threshold: {LIFECYCLE_THRESHOLD}s)",
+                f"Total time: {elapsed:.2f}s (threshold: {threshold}s)",
             )
 
     def _check_body_size(self, ctx: ConnectionContext) -> None:
         assert ctx.http is not None
         total = ctx.http.total_body_bytes
-        if total > BODY_SIZE_THRESHOLD:
+        threshold = self._config.body_size_threshold
+        if total > threshold:
             mb = total / (1024 * 1024)
             ctx.violation(
                 SEM_008,
-                f"Response body: {mb:.1f} MB (threshold: {BODY_SIZE_THRESHOLD // (1024 * 1024)} MB)",
+                f"Response body: {mb:.1f} MB (threshold: {threshold // (1024 * 1024)} MB)",
             )
 
     def _check_buffering(self, ctx: ConnectionContext) -> None:
         assert ctx.http is not None
         if ctx.http.body_chunks_sent != 1:
             return
-        if ctx.http.total_body_bytes > BUFFER_CHUNK_THRESHOLD:
+        threshold = self._config.buffer_chunk_threshold
+        if ctx.http.total_body_bytes > threshold:
             mb = ctx.http.total_body_bytes / (1024 * 1024)
             ctx.violation(
                 SEM_009,
@@ -189,17 +189,19 @@ class SemanticValidator(BaseValidator):
         if not ctx.http.body_complete:
             return
         delivery = time.monotonic() - resp_at
-        if delivery > BODY_DELIVERY_THRESHOLD:
+        threshold = self._config.body_delivery_threshold
+        if delivery > threshold:
             ctx.violation(
                 SEM_010,
-                f"Body delivery: {delivery:.2f}s (threshold: {BODY_DELIVERY_THRESHOLD}s)",
+                f"Body delivery: {delivery:.2f}s (threshold: {threshold}s)",
             )
 
     def _check_chunk_fragmentation(self, ctx: ConnectionContext) -> None:
         assert ctx.http is not None
         chunks = ctx.http.body_chunks_sent
-        if chunks > CHUNK_COUNT_THRESHOLD:
+        threshold = self._config.chunk_count_threshold
+        if chunks > threshold:
             ctx.violation(
                 SEM_011,
-                f"Body sent in {chunks} chunks (threshold: {CHUNK_COUNT_THRESHOLD})",
+                f"Body sent in {chunks} chunks (threshold: {threshold})",
             )

@@ -25,7 +25,8 @@ def make_http_ctx(
         "root_path": "",
         "headers": [],
     }
-    return ConnectionContext(scope, _disabled_rules=disabled_rules or frozenset())
+    rule_allowed = (lambda rule: rule.id not in disabled_rules) if disabled_rules else None
+    return ConnectionContext(scope, _rule_allowed=rule_allowed)
 
 
 def make_ws_ctx(*, path: str = "/ws") -> ConnectionContext:
