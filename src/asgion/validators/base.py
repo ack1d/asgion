@@ -58,6 +58,7 @@ class ValidatorRegistry:
 def create_default_registry() -> ValidatorRegistry:
     """Create a registry with all built-in validators."""
     from asgion.spec import ALL_SPECS
+    from asgion.validators.extension import ExtensionValidator
     from asgion.validators.general import GeneralValidator
     from asgion.validators.http_fsm import HTTPFSMValidator
     from asgion.validators.lifespan_fsm import LifespanFSMValidator
@@ -77,5 +78,8 @@ def create_default_registry() -> ValidatorRegistry:
     registry.register(HTTPFSMValidator(), scope_types=["http"])
     registry.register(WebSocketFSMValidator(), scope_types=["websocket"])
     registry.register(LifespanFSMValidator(), scope_types=["lifespan"])
+
+    # Layer 10: Extension validator
+    registry.register(ExtensionValidator(), scope_types=["http"])
 
     return registry

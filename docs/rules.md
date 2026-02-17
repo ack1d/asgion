@@ -6,7 +6,7 @@ All validation rules that Asgion checks, grouped by protocol layer.
 
 Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asgiref](https://github.com/django/asgiref)).
 
-**Total: 148 rules**
+**Total: 151 rules**
 
 | Severity | Meaning |
 |----------|---------|
@@ -229,3 +229,11 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 | `LF-008` | info | App exited during shutdown without sending complete/failed | - |
 | `LF-009` | warning | App exited during startup without sending startup.complete or startup.failed | An exception during startup is not the same as startup.failed — send the proper signal |
 | `LF-010` | info | Lifespan state dict is available for sharing state with requests | state is mutable in lifespan scope and shallow-copied to request scopes |
+
+## Extensions (Layer 10)
+
+| ID | Severity | Summary | Hint |
+|----|----------|---------|------|
+| `EX-009` | error | Extension event sent without corresponding scope extension | scope['extensions'] must contain the extension key |
+| `EX-010` | error | http.response.early_hint sent after http.response.start | Early hints must be sent before the response starts |
+| `EX-011` | error | http.response.debug sent after http.response.start | Debug info should be sent before the response starts |

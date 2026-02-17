@@ -1,6 +1,9 @@
 import pytest
 
+from asgion.core.context import ConnectionContext
 from asgion.spec import ALL_SPECS
+from asgion.validators.extension import ExtensionValidator
+from asgion.validators.http_fsm import HTTPFSMValidator
 from asgion.validators.spec_events import SpecEventValidator
 from tests.conftest import assert_no_violations, assert_violation, make_http_ctx
 
@@ -8,6 +11,11 @@ from tests.conftest import assert_no_violations, assert_violation, make_http_ctx
 @pytest.fixture
 def validator() -> SpecEventValidator:
     return SpecEventValidator(ALL_SPECS["http"])
+
+
+@pytest.fixture
+def ext_validator() -> ExtensionValidator:
+    return ExtensionValidator()
 
 
 # --- HE-020: trailers headers format ---
@@ -133,3 +141,98 @@ def test_debug_info_absent_passes(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_send(ctx, {"type": "http.response.debug"})
     assert_no_violations(ctx)
+
+
+# --- EX-009: Gate checks ---
+
+
+def _make_ext_ctx(*ext_keys: str) -> ConnectionContext:
+    extensions = {k: {} for k in ext_keys}
+    ctx = make_http_ctx()
+    ctx.scope["extensions"] = extensions
+    return ctx
+
+
+def test_ex009_push_without_extension(ext_validator: ExtensionValidator) -> None:
+    ctx = make_http_ctx()
+    ext_validator.validate_send(ctx, {"type": "http.response.push", "path": "/x", "headers": []})
+    assert_violation(ctx, "EX-009")
+
+
+def test_ex009_push_with_extension_passes(ext_validator: ExtensionValidator) -> None:
+    ctx = _make_ext_ctx("http.response.push")
+    ext_validator.validate_send(ctx, {"type": "http.response.push", "path": "/x", "headers": []})
+    matching = [v for v in ctx.violations if v.rule_id == "EX-009"]
+    assert matching == []
+
+
+def test_ex009_pathsend_without_extension(ext_validator: ExtensionValidator) -> None:
+    ctx = make_http_ctx()
+    ext_validator.validate_send(ctx, {"type": "http.response.pathsend", "path": "/f"})
+    assert_violation(ctx, "EX-009")
+
+
+def test_ex009_zerocopysend_without_extension(ext_validator: ExtensionValidator) -> None:
+    ctx = make_http_ctx()
+    ext_validator.validate_send(ctx, {"type": "http.response.zerocopysend", "file": 3})
+    assert_violation(ctx, "EX-009")
+
+
+def test_ex009_early_hint_without_extension(ext_validator: ExtensionValidator) -> None:
+    ctx = make_http_ctx()
+    ext_validator.validate_send(ctx, {"type": "http.response.early_hint", "headers": []})
+    assert_violation(ctx, "EX-009")
+
+
+def test_ex009_debug_without_extension(ext_validator: ExtensionValidator) -> None:
+    ctx = make_http_ctx()
+    ext_validator.validate_send(ctx, {"type": "http.response.debug", "info": {}})
+    assert_violation(ctx, "EX-009")
+
+
+def test_ex009_non_extension_event_ignored(ext_validator: ExtensionValidator) -> None:
+    ctx = make_http_ctx()
+    ext_validator.validate_send(ctx, {"type": "http.response.start", "status": 200, "headers": []})
+    assert_no_violations(ctx)
+
+
+# --- EX-010: early_hint after response.start ---
+
+
+def test_ex010_early_hint_after_response_start(ext_validator: ExtensionValidator) -> None:
+    ctx = _make_ext_ctx("http.response.early_hint")
+    fsm = HTTPFSMValidator()
+    fsm.validate_receive(ctx, {"type": "http.request", "body": b"", "more_body": False})
+    fsm.validate_send(ctx, {"type": "http.response.start", "status": 200, "headers": []})
+    ext_validator.validate_send(ctx, {"type": "http.response.early_hint", "headers": []})
+    assert_violation(ctx, "EX-010")
+
+
+def test_ex010_early_hint_before_response_start_passes(
+    ext_validator: ExtensionValidator,
+) -> None:
+    ctx = _make_ext_ctx("http.response.early_hint")
+    ext_validator.validate_send(ctx, {"type": "http.response.early_hint", "headers": []})
+    matching = [v for v in ctx.violations if v.rule_id == "EX-010"]
+    assert matching == []
+
+
+# --- EX-011: debug after response.start ---
+
+
+def test_ex011_debug_after_response_start(ext_validator: ExtensionValidator) -> None:
+    ctx = _make_ext_ctx("http.response.debug")
+    fsm = HTTPFSMValidator()
+    fsm.validate_receive(ctx, {"type": "http.request", "body": b"", "more_body": False})
+    fsm.validate_send(ctx, {"type": "http.response.start", "status": 200, "headers": []})
+    ext_validator.validate_send(ctx, {"type": "http.response.debug", "info": {}})
+    assert_violation(ctx, "EX-011")
+
+
+def test_ex011_debug_before_response_start_passes(
+    ext_validator: ExtensionValidator,
+) -> None:
+    ctx = _make_ext_ctx("http.response.debug")
+    ext_validator.validate_send(ctx, {"type": "http.response.debug", "info": {}})
+    matching = [v for v in ctx.violations if v.rule_id == "EX-011"]
+    assert matching == []
