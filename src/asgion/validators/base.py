@@ -82,4 +82,9 @@ def create_default_registry() -> ValidatorRegistry:
     # Layer 10: Extension validator
     registry.register(ExtensionValidator(), scope_types=["http"])
 
+    # Layer 11: Semantic validator
+    from asgion.validators.semantic import SemanticValidator
+
+    registry.register(SemanticValidator(), scope_types=["http"])
+
     return registry

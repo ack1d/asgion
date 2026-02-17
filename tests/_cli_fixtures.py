@@ -1,12 +1,12 @@
 async def good_app(scope, receive, send):  # type: ignore[no-untyped-def]
     await receive()
-    await send({"type": "http.response.start", "status": 200, "headers": []})
+    await send({"type": "http.response.start", "status": 200, "headers": [(b"content-type", b"text/plain")]})
     await send({"type": "http.response.body", "body": b"OK", "more_body": False})
 
 
 async def bad_app(scope, receive, send):  # type: ignore[no-untyped-def]
     await receive()
-    await send({"type": "http.response.start", "status": 200, "headers": []})
+    await send({"type": "http.response.start", "status": 200, "headers": [(b"content-type", b"text/plain")]})
     await send({"type": "http.response.body", "body": "not bytes"})
 
 
@@ -20,7 +20,7 @@ async def good_lifespan_app(scope, receive, send):  # type: ignore[no-untyped-de
             await send({"type": "lifespan.shutdown.complete"})
         return
     await receive()
-    await send({"type": "http.response.start", "status": 200, "headers": []})
+    await send({"type": "http.response.start", "status": 200, "headers": [(b"content-type", b"text/plain")]})
     await send({"type": "http.response.body", "body": b"OK", "more_body": False})
 
 

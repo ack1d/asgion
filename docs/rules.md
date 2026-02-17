@@ -6,7 +6,7 @@ All validation rules that Asgion checks, grouped by protocol layer.
 
 Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asgiref](https://github.com/django/asgiref)).
 
-**Total: 151 rules**
+**Total: 156 rules**
 
 | Severity | Meaning |
 |----------|---------|
@@ -237,3 +237,13 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 | `EX-009` | error | Extension event sent without corresponding scope extension | scope['extensions'] must contain the extension key |
 | `EX-010` | error | http.response.early_hint sent after http.response.start | Early hints must be sent before the response starts |
 | `EX-011` | error | http.response.debug sent after http.response.start | Debug info should be sent before the response starts |
+
+## Semantic (Layer 11)
+
+| ID | Severity | Summary | Hint |
+|----|----------|---------|------|
+| `SEM-001` | warning | Duplicate Content-Type header in response | Only one Content-Type header should be sent |
+| `SEM-002` | info | No Content-Type header on 2xx response | Responses with a body should include a Content-Type header |
+| `SEM-003` | warning | Content-Length does not match actual body size | - |
+| `SEM-004` | warning | Set-Cookie without Secure flag on http:// scheme | Cookies on plaintext HTTP can be intercepted |
+| `SEM-005` | info | App completed without receiving http.disconnect | Long-running handlers should listen for http.disconnect to detect client drops |

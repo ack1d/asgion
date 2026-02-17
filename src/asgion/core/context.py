@@ -29,6 +29,7 @@ class HTTPProtocolState:
     disconnected: bool = False
     request_body_complete: bool = False
     trailers_sent: bool = False
+    content_length: int | None = None
 
 
 @dataclass

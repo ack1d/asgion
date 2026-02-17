@@ -4,6 +4,7 @@ from asgion.rules import (
     general,
     http_fsm,
     lifespan_fsm,
+    semantic,
     ws_fsm,
 )
 from asgion.spec import SPEC_RULES
@@ -29,6 +30,7 @@ _MANUAL_RULES: dict[str, Rule] = _collect_rules(
     ws_fsm,
     lifespan_fsm,
     extension,
+    semantic,
 )
 
 RULES: dict[str, Rule] = {**_MANUAL_RULES, **SPEC_RULES}
