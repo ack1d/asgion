@@ -42,8 +42,8 @@ asgion check myapp:app
 
 ## What It Catches
 
-**75 rules** across 7 layers — from basic scope validation to HTTP/WebSocket/Lifespan
-state machine enforcement.
+**162 rules** across 12 layers — scope fields, event schemas, state machines,
+extensions, and semantic checks for HTTP, WebSocket, and Lifespan.
 
 ```
 [G-005]  error    Message must be a dict
@@ -84,7 +84,7 @@ Exit codes: `0` = clean, `1` = violations (with `--strict`), `2` = runtime error
 asgion rules [OPTIONS]
 ```
 
-List all 75 validation rules.
+List all validation rules.
 
 | Option | Description |
 |--------|-------------|
@@ -136,13 +136,46 @@ class Violation:
     method: str        # "GET"
 ```
 
+## pytest Plugin
+
+```bash
+pip install asgion[pytest]
+```
+
+```python
+async def test_my_app(asgi_inspect):
+    app = asgi_inspect(my_app)
+    async with httpx.AsyncClient(transport=ASGITransport(app)) as client:
+        resp = await client.get("/users")
+    assert app.violations == []
+```
+
+Auto-check violations with a marker:
+
+```python
+@pytest.mark.asgi_validate(min_severity="error")
+async def test_strict(asgi_inspect):
+    app = asgi_inspect(my_app)
+    # ... drive the app — violations checked automatically at teardown
+```
+
+Or enable globally for all tests using `asgi_inspect`:
+
+```bash
+pytest --asgi-strict
+pytest --asgi-strict --asgi-min-severity warning
+```
+
 ## Comparison
 
 | Feature | asgion | asgiref.testing | Manual testing |
 |---------|--------|-----------------|----------------|
-| Scope validation | 14 rules | basic | none |
-| Event schema checks | 40+ rules | none | manual |
-| State machine (FSM) | 21 rules | none | none |
+| Scope validation | 71 rules | basic | none |
+| Event schema checks | 42 rules | none | manual |
+| State machine (FSM) | 35 rules | none | none |
+| Semantic checks | 11 rules | none | none |
+| Extension validation | 11 rules | none | none |
+| pytest plugin | yes | no | n/a |
 | Real-time callbacks | yes | no | n/a |
 | CLI tool | yes | no | no |
 | Zero dependencies | yes | no (asgiref) | n/a |

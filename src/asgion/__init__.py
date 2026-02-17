@@ -5,7 +5,7 @@ from asgion.core.violation import ASGIProtocolError, Violation
 from asgion.core.wrapper import inspect
 from asgion.validators.base import BaseValidator, ValidatorRegistry
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 
 __all__ = [

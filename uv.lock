@@ -4,7 +4,7 @@ requires-python = ">=3.12"
 
 [[package]]
 name = "asgion"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "." }
 
 [package.optional-dependencies]
@@ -28,7 +28,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "click", marker = "extra == 'cli'", specifier = ">=8.3" },
-    { name = "pytest", marker = "extra == 'pytest'", specifier = ">=8.3.0" },
+    { name = "pytest", marker = "extra == 'pytest'", specifier = ">=8.3" },
 ]
 provides-extras = ["cli", "pytest"]
 
