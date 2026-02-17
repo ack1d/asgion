@@ -76,11 +76,13 @@ async def _run(app, scope_type: str = "http", **kwargs) -> list[Violation]:
 async def test_correct_http_app_no_violations():
     async def app(scope, receive, send):
         await receive()
-        await send({
-            "type": "http.response.start",
-            "status": 200,
-            "headers": [(b"content-type", b"text/plain")],
-        })
+        await send(
+            {
+                "type": "http.response.start",
+                "status": 200,
+                "headers": [(b"content-type", b"text/plain")],
+            }
+        )
         await send({"type": "http.response.body", "body": b"OK", "more_body": False})
 
     violations = await _run(app)

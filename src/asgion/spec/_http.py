@@ -241,9 +241,7 @@ HTTP_SPEC = ProtocolSpec(
         EventSpec(
             "http.response.trailers",
             "send",
-            checks=(
-                HeadersFormat("headers", "HE-020"),
-            ),
+            checks=(HeadersFormat("headers", "HE-020"),),
         ),
         EventSpec(
             "http.response.push",
@@ -257,9 +255,7 @@ HTTP_SPEC = ProtocolSpec(
         EventSpec(
             "http.response.zerocopysend",
             "send",
-            checks=(
-                FieldRequired("file", "EX-004"),
-            ),
+            checks=(FieldRequired("file", "EX-004"),),
         ),
         EventSpec(
             "http.response.pathsend",
@@ -272,16 +268,12 @@ HTTP_SPEC = ProtocolSpec(
         EventSpec(
             "http.response.early_hint",
             "send",
-            checks=(
-                HeadersFormat("headers", "EX-007"),
-            ),
+            checks=(HeadersFormat("headers", "EX-007"),),
         ),
         EventSpec(
             "http.response.debug",
             "send",
-            checks=(
-                FieldType("info", dict, "EX-008"),
-            ),
+            checks=(FieldType("info", dict, "EX-008"),),
         ),
     ),
 )

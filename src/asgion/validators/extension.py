@@ -3,13 +3,15 @@ from asgion.core.context import ConnectionContext
 from asgion.rules.extension import EX_009, EX_010, EX_011
 from asgion.validators.base import BaseValidator
 
-_EXTENSION_EVENTS = frozenset({
-    "http.response.push",
-    "http.response.zerocopysend",
-    "http.response.pathsend",
-    "http.response.early_hint",
-    "http.response.debug",
-})
+_EXTENSION_EVENTS = frozenset(
+    {
+        "http.response.push",
+        "http.response.zerocopysend",
+        "http.response.pathsend",
+        "http.response.early_hint",
+        "http.response.debug",
+    }
+)
 
 
 class ExtensionValidator(BaseValidator):

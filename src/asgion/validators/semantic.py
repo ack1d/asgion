@@ -64,9 +64,7 @@ class SemanticValidator(BaseValidator):
         self._check_body_delivery(ctx)
         self._check_chunk_fragmentation(ctx)
 
-    def _check_response_headers(
-        self, ctx: ConnectionContext, message: Message
-    ) -> None:
+    def _check_response_headers(self, ctx: ConnectionContext, message: Message) -> None:
         assert ctx.http is not None
         headers = message.get("headers")
         if not isinstance(headers, list | tuple):

@@ -511,7 +511,11 @@ def test_validate_send_sets_response_timestamp(validator: SemanticValidator) -> 
     assert ctx.http.response_started_at is None
     validator.validate_send(
         ctx,
-        {"type": "http.response.start", "status": 200, "headers": [(b"content-type", b"text/plain")]},
+        {
+            "type": "http.response.start",
+            "status": 200,
+            "headers": [(b"content-type", b"text/plain")],
+        },
     )
     assert ctx.http.response_started_at is not None
 
@@ -526,4 +530,3 @@ def test_threshold_override(validator: SemanticValidator, monkeypatch: pytest.Mo
     monkeypatch.setattr(sem_mod, "BODY_SIZE_THRESHOLD", 100)
     validator.validate_complete(ctx)
     assert_violation(ctx, "SEM-008")
-

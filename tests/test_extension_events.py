@@ -63,9 +63,7 @@ def test_ex003_push_headers_bad(validator: SpecEventValidator) -> None:
 
 def test_push_valid(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
-    validator.validate_send(
-        ctx, {"type": "http.response.push", "path": "/resource", "headers": []}
-    )
+    validator.validate_send(ctx, {"type": "http.response.push", "path": "/resource", "headers": []})
     assert_no_violations(ctx)
 
 

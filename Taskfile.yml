@@ -12,7 +12,7 @@ tasks:
 
   test:cov:
     desc: Run tests with coverage
-    cmd: uv run pytest --cov
+    cmd: uv run pytest -n auto --cov
 
   lint:
     aliases: [l]
