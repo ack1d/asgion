@@ -6,7 +6,7 @@ All validation rules that Asgion checks, grouped by protocol layer.
 
 Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asgiref](https://github.com/django/asgiref)).
 
-**Total: 156 rules**
+**Total: 162 rules**
 
 | Severity | Meaning |
 |----------|---------|
@@ -247,3 +247,9 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 | `SEM-003` | warning | Content-Length does not match actual body size | - |
 | `SEM-004` | warning | Set-Cookie without Secure flag on http:// scheme | Cookies on plaintext HTTP can be intercepted |
 | `SEM-005` | info | App completed without receiving http.disconnect | Long-running handlers should listen for http.disconnect to detect client drops |
+| `SEM-006` | perf | Slow time to first byte | Response started more than 5s after receiving the request |
+| `SEM-007` | perf | Total request lifecycle exceeded threshold | Connection took more than 30s from start to completion |
+| `SEM-008` | perf | Large response body | Response body exceeds 10 MB; consider streaming or compression |
+| `SEM-009` | info | Response body not streamed | Large body sent in a single chunk; consider streaming with more_body=True |
+| `SEM-010` | perf | Slow response body delivery | Time from response start to body complete exceeds 10s |
+| `SEM-011` | info | Excessive body chunk fragmentation | Response sent in more than 100 chunks; consider larger writes |

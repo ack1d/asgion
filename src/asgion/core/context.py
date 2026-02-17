@@ -30,6 +30,8 @@ class HTTPProtocolState:
     request_body_complete: bool = False
     trailers_sent: bool = False
     content_length: int | None = None
+    request_received_at: float | None = None
+    response_started_at: float | None = None
 
 
 @dataclass

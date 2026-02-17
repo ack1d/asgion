@@ -43,3 +43,51 @@ SEM_005 = Rule(
     layer=_LAYER,
     scope_types=_SCOPES,
 )
+SEM_006 = Rule(
+    "SEM-006",
+    Severity.PERF,
+    "Slow time to first byte",
+    hint="Response started more than 5s after receiving the request",
+    layer=_LAYER,
+    scope_types=_SCOPES,
+)
+SEM_007 = Rule(
+    "SEM-007",
+    Severity.PERF,
+    "Total request lifecycle exceeded threshold",
+    hint="Connection took more than 30s from start to completion",
+    layer=_LAYER,
+    scope_types=_SCOPES,
+)
+SEM_008 = Rule(
+    "SEM-008",
+    Severity.PERF,
+    "Large response body",
+    hint="Response body exceeds 10 MB; consider streaming or compression",
+    layer=_LAYER,
+    scope_types=_SCOPES,
+)
+SEM_009 = Rule(
+    "SEM-009",
+    Severity.INFO,
+    "Response body not streamed",
+    hint="Large body sent in a single chunk; consider streaming with more_body=True",
+    layer=_LAYER,
+    scope_types=_SCOPES,
+)
+SEM_010 = Rule(
+    "SEM-010",
+    Severity.PERF,
+    "Slow response body delivery",
+    hint="Time from response start to body complete exceeds 10s",
+    layer=_LAYER,
+    scope_types=_SCOPES,
+)
+SEM_011 = Rule(
+    "SEM-011",
+    Severity.INFO,
+    "Excessive body chunk fragmentation",
+    hint="Response sent in more than 100 chunks; consider larger writes",
+    layer=_LAYER,
+    scope_types=_SCOPES,
+)

@@ -1,15 +1,43 @@
 import contextlib
+import time
 
 from asgion.core._types import Message, ScopeType
 from asgion.core.context import ConnectionContext
-from asgion.rules.semantic import SEM_001, SEM_002, SEM_003, SEM_004, SEM_005
+from asgion.rules.semantic import (
+    SEM_001,
+    SEM_002,
+    SEM_003,
+    SEM_004,
+    SEM_005,
+    SEM_006,
+    SEM_007,
+    SEM_008,
+    SEM_009,
+    SEM_010,
+    SEM_011,
+)
 from asgion.validators.base import BaseValidator
 
 _NO_BODY_STATUSES = frozenset({204, 304}) | frozenset(range(100, 200))
 
+# Perf thresholds (seconds / bytes)
+TTFB_THRESHOLD: float = 5.0
+LIFECYCLE_THRESHOLD: float = 30.0
+BODY_SIZE_THRESHOLD: int = 10 * 1024 * 1024  # 10 MB
+BUFFER_CHUNK_THRESHOLD: int = 1 * 1024 * 1024  # 1 MB
+BODY_DELIVERY_THRESHOLD: float = 10.0
+CHUNK_COUNT_THRESHOLD: int = 100
+
 
 class SemanticValidator(BaseValidator):
     """Validates semantic HTTP correctness beyond protocol state machine."""
+
+    def validate_receive(self, ctx: ConnectionContext, message: Message) -> None:
+        if ctx.http is None:
+            return
+        msg_type = message.get("type", "")
+        if msg_type == "http.request" and ctx.http.request_received_at is None:
+            ctx.http.request_received_at = time.monotonic()
 
     def validate_send(self, ctx: ConnectionContext, message: Message) -> None:
         if ctx.http is None:
@@ -17,6 +45,8 @@ class SemanticValidator(BaseValidator):
 
         msg_type = message.get("type", "")
         if msg_type == "http.response.start":
+            if ctx.http.response_started_at is None:
+                ctx.http.response_started_at = time.monotonic()
             self._check_response_headers(ctx, message)
 
     def validate_complete(self, ctx: ConnectionContext) -> None:
@@ -27,6 +57,12 @@ class SemanticValidator(BaseValidator):
 
         self._check_content_length(ctx)
         self._check_disconnect_handling(ctx)
+        self._check_ttfb(ctx)
+        self._check_lifecycle(ctx)
+        self._check_body_size(ctx)
+        self._check_buffering(ctx)
+        self._check_body_delivery(ctx)
+        self._check_chunk_fragmentation(ctx)
 
     def _check_response_headers(
         self, ctx: ConnectionContext, message: Message
@@ -107,3 +143,65 @@ class SemanticValidator(BaseValidator):
         if ctx.http.response_start_count == 0:
             return
         ctx.violation(SEM_005)
+
+    def _check_ttfb(self, ctx: ConnectionContext) -> None:
+        assert ctx.http is not None
+        req_at = ctx.http.request_received_at
+        resp_at = ctx.http.response_started_at
+        if req_at is None or resp_at is None:
+            return
+        ttfb = resp_at - req_at
+        if ttfb > TTFB_THRESHOLD:
+            ctx.violation(SEM_006, f"TTFB: {ttfb:.2f}s (threshold: {TTFB_THRESHOLD}s)")
+
+    def _check_lifecycle(self, ctx: ConnectionContext) -> None:
+        elapsed = ctx.elapsed
+        if elapsed > LIFECYCLE_THRESHOLD:
+            ctx.violation(
+                SEM_007,
+                f"Total time: {elapsed:.2f}s (threshold: {LIFECYCLE_THRESHOLD}s)",
+            )
+
+    def _check_body_size(self, ctx: ConnectionContext) -> None:
+        assert ctx.http is not None
+        total = ctx.http.total_body_bytes
+        if total > BODY_SIZE_THRESHOLD:
+            mb = total / (1024 * 1024)
+            ctx.violation(
+                SEM_008,
+                f"Response body: {mb:.1f} MB (threshold: {BODY_SIZE_THRESHOLD // (1024 * 1024)} MB)",
+            )
+
+    def _check_buffering(self, ctx: ConnectionContext) -> None:
+        assert ctx.http is not None
+        if ctx.http.body_chunks_sent != 1:
+            return
+        if ctx.http.total_body_bytes > BUFFER_CHUNK_THRESHOLD:
+            mb = ctx.http.total_body_bytes / (1024 * 1024)
+            ctx.violation(
+                SEM_009,
+                f"Single chunk of {mb:.1f} MB; consider streaming",
+            )
+
+    def _check_body_delivery(self, ctx: ConnectionContext) -> None:
+        assert ctx.http is not None
+        resp_at = ctx.http.response_started_at
+        if resp_at is None:
+            return
+        if not ctx.http.body_complete:
+            return
+        delivery = time.monotonic() - resp_at
+        if delivery > BODY_DELIVERY_THRESHOLD:
+            ctx.violation(
+                SEM_010,
+                f"Body delivery: {delivery:.2f}s (threshold: {BODY_DELIVERY_THRESHOLD}s)",
+            )
+
+    def _check_chunk_fragmentation(self, ctx: ConnectionContext) -> None:
+        assert ctx.http is not None
+        chunks = ctx.http.body_chunks_sent
+        if chunks > CHUNK_COUNT_THRESHOLD:
+            ctx.violation(
+                SEM_011,
+                f"Body sent in {chunks} chunks (threshold: {CHUNK_COUNT_THRESHOLD})",
+            )
