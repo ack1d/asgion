@@ -21,6 +21,17 @@
 
 ### Features
 
+- **WebSocket checking** - `asgion check` now supports WebSocket endpoints via `--path ws:/ws/chat`
+  (or `wss:`). Without a prefix `--path` defaults to HTTP; `http:` and `https:` prefixes are also
+  accepted for symmetry. The `asgi_inspect` pytest fixture now accepts `config=` parameter.
+
+- **CLI deduplication** - repeated violations across multiple `--path` values are grouped in
+  text output (`same as GET /a`) and JSON output (`count`, `paths` fields per violation;
+  `summary.unique` added).
+
+- **`--path` replaces `--url`** in `asgion check` — name now accurately reflects that a path
+  (not a full URL) is expected. Protocol prefix determines scope type.
+
 - **SEM-012** - CORS misconfiguration: `Access-Control-Allow-Origin: *` combined with
   `Access-Control-Allow-Credentials: true` is rejected by browsers (WARNING).
 - **SEM-013** - `text/*` response missing `charset` in `Content-Type` header (INFO).

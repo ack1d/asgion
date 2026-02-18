@@ -31,6 +31,7 @@ import pytest
 
 if TYPE_CHECKING:
     from asgion.core._types import ASGIApp, Receive, Scope, Send
+    from asgion.core.config import AsgionConfig
 
 _SEVERITY_ORDER: dict[str, int] = {
     "perf": 0,
@@ -60,6 +61,7 @@ class InspectedApp:
 def _make_inspected_app(
     app: ASGIApp,
     *,
+    config: AsgionConfig | None = None,
     exclude_rules: set[str] | None = None,
 ) -> InspectedApp:
     from asgion.core.wrapper import inspect
@@ -67,6 +69,7 @@ def _make_inspected_app(
     collected: list[Any] = []
     wrapped = inspect(
         app,
+        config=config,
         on_violation=collected.append,
         exclude_rules=exclude_rules,
     )
@@ -126,9 +129,10 @@ def asgi_inspect(request: pytest.FixtureRequest) -> Any:
     def factory(
         app: ASGIApp,
         *,
+        config: AsgionConfig | None = None,
         exclude_rules: set[str] | None = None,
     ) -> InspectedApp:
-        inspected = _make_inspected_app(app, exclude_rules=exclude_rules)
+        inspected = _make_inspected_app(app, config=config, exclude_rules=exclude_rules)
         apps.append(inspected)
         return inspected
 
