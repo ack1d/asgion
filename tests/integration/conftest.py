@@ -1,4 +1,5 @@
 import asyncio
+import pathlib
 
 import pytest
 
@@ -6,6 +7,14 @@ from asgion.core._types import ASGIApp, Message
 
 # Skip all tests in this directory if httpx is not installed.
 pytest.importorskip("httpx")
+
+_INTEGRATION_DIR = pathlib.Path(__file__).parent
+
+
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    for item in items:
+        if item.path and item.path.is_relative_to(_INTEGRATION_DIR):
+            item.add_marker(pytest.mark.integration)
 
 
 async def drive_lifespan(app: ASGIApp) -> list[Message]:
