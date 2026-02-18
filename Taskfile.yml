@@ -14,6 +14,13 @@ tasks:
     desc: Run tests with coverage
     cmd: uv run pytest -n auto --cov
 
+  test:integration:
+    aliases: [ti]
+    desc: Run integration tests against real ASGI frameworks
+    cmds:
+      - uv sync --group integration
+      - uv run pytest tests/integration/ -v
+
   lint:
     aliases: [l]
     desc: Run linter
