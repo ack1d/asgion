@@ -47,9 +47,9 @@ extensions, and semantic checks for HTTP, WebSocket, and Lifespan.
 
 ```
 [G-005]  error    Message must be a dict
-[HE-017] error    response.body 'body' must be bytes, got str
-[HF-004] error    Duplicate http.response.start
-[WE-012] warning  websocket.send has both 'bytes' and 'text' set
+[HE-012] error    response.body 'body' must be bytes, got str
+[HF-003] error    Duplicate http.response.start
+[WE-008] warning  websocket.send has both 'bytes' and 'text' set
 ```
 
 Every rule has an ID, severity, summary, and hint. See the full list:
@@ -68,7 +68,7 @@ Check an ASGI app for protocol violations.
 | Option | Description |
 |--------|-------------|
 | `APP_PATH` | Module:attribute path (e.g. `myapp:app`) |
-| `--url PATH` | URL paths to check (repeatable, default `/`) |
+| `--path PATH` | Paths to check (repeatable, default `/`). Prefix with protocol to set scope type: `http:/path`, `https:/path`, `ws:/path`, `wss:/path` |
 | `--strict` | Exit 1 on any violations |
 | `--format text\|json` | Output format (default `text`) |
 | `--exclude-rules IDS` | Comma-separated rule IDs to skip |
@@ -77,6 +77,12 @@ Check an ASGI app for protocol violations.
 | `--profile PROFILE` | Rule filter profile: `strict`, `recommended`, `minimal` |
 | `--no-color` | Disable ANSI colors (also respects `NO_COLOR` env) |
 | `--no-lifespan` | Skip lifespan startup/shutdown checks |
+
+```bash
+asgion check myapp:app --path /api/users           # HTTP (default)
+asgion check myapp:app --path ws:/ws/chat          # WebSocket
+asgion check myapp:app --path /api --path ws:/ws   # both
+```
 
 Exit codes: `0` = clean, `1` = violations (with `--strict`), `2` = runtime error.
 

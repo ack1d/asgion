@@ -58,7 +58,7 @@ class TestRunner:
         report = run_check(
             good_lifespan_app,
             app_path="test:app",
-            urls=("/", "/other"),
+            paths=("/", "/other"),
             run_lifespan=False,
         )
         assert len(report.results) == 2
@@ -68,6 +68,24 @@ class TestRunner:
 
         report = run_check(good_lifespan_app, app_path="test:app", run_lifespan=False)
         assert all(r.scope_type == "http" for r in report.results)
+
+    def test_ws_path_no_violations(self) -> None:
+        from tests._cli_fixtures import good_ws_app
+
+        report = run_check(good_ws_app, app_path="test:app", paths=("ws:/ws",), run_lifespan=False)
+        assert len(report.results) == 1
+        assert report.results[0].scope_type == "websocket"
+        assert report.all_violations == []
+
+    def test_ws_path_label_in_text_output(self) -> None:
+        from asgion.cli._output import format_text
+        from tests._cli_fixtures import good_ws_app
+
+        report = run_check(
+            good_ws_app, app_path="test:app", paths=("ws:/ws/chat",), run_lifespan=False
+        )
+        text = format_text(report, no_color=True)
+        assert "WS /ws/chat" in text
 
     def test_filtered(self) -> None:
         v1 = Violation(rule_id="X-001", severity=Severity.INFO, message="info")
@@ -344,6 +362,74 @@ class TestCLI:
         total = len(ALL_RULES)
         text = format_rules_text(ALL_RULES[:5], no_color=True, total=total)
         assert f"5 rules (filtered from {total})" in text
+
+    def test_check_ws_path(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "tests._cli_fixtures:good_ws_app",
+                "--no-color",
+                "--no-lifespan",
+                "--path",
+                "ws:/ws",
+            ],
+        )
+        assert result.exit_code == 0
+        assert "WS /ws" in result.output
+        assert "No violations found." in result.output
+
+    def test_check_wss_prefix(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "tests._cli_fixtures:good_ws_app",
+                "--no-color",
+                "--no-lifespan",
+                "--path",
+                "wss:/ws",
+            ],
+        )
+        assert result.exit_code == 0
+        assert "WS /ws" in result.output
+
+    def test_check_http_prefix(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "tests._cli_fixtures:good_lifespan_app",
+                "--no-color",
+                "--no-lifespan",
+                "--path",
+                "http:/api",
+            ],
+        )
+        assert result.exit_code == 0
+        assert "GET /api" in result.output
+
+    def test_check_mixed_paths(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "tests._cli_fixtures:good_ws_app",
+                "--no-color",
+                "--no-lifespan",
+                "--path",
+                "/",
+                "--path",
+                "ws:/ws",
+            ],
+        )
+        assert result.exit_code == 0
+        assert "GET /" in result.output
+        assert "WS /ws" in result.output
 
     def test_check_with_lifespan(self) -> None:
         runner = CliRunner()

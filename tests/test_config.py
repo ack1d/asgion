@@ -22,7 +22,7 @@ from asgion.core.rule import Rule
 
 _PERF_RULE = Rule(id="X-001", severity=Severity.PERF, summary="perf rule", layer="http.fsm")
 _INFO_RULE = Rule(id="X-002", severity=Severity.INFO, summary="info rule", layer="http.fsm")
-_WARN_RULE = Rule(id="X-003", severity=Severity.WARNING, summary="warn rule", layer="semantic")
+_WARN_RULE = Rule(id="X-003", severity=Severity.WARNING, summary="warn rule", layer="http.semantic")
 _ERR_RULE = Rule(id="X-004", severity=Severity.ERROR, summary="error rule", layer="http.scope")
 
 
@@ -73,7 +73,7 @@ def test_allows_default_min_severity_passes_perf() -> None:
 def test_allows_no_categories_passes_any_layer() -> None:
     cfg = AsgionConfig(categories=frozenset())
     assert cfg.allows(_PERF_RULE) is True  # layer="http.fsm"
-    assert cfg.allows(_WARN_RULE) is True  # layer="semantic"
+    assert cfg.allows(_WARN_RULE) is True  # layer="http.semantic"
 
 
 def test_allows_exact_category_match() -> None:
@@ -86,13 +86,13 @@ def test_allows_prefix_category_match() -> None:
     cfg = AsgionConfig(categories=frozenset({"http"}))
     assert cfg.allows(_PERF_RULE) is True  # layer="http.fsm" — prefix match
     assert cfg.allows(_ERR_RULE) is True  # layer="http.scope" — prefix match
-    assert cfg.allows(_WARN_RULE) is False  # layer="semantic" — no match
+    assert cfg.allows(_WARN_RULE) is True  # layer="http.semantic" — prefix match
 
 
 def test_allows_multiple_categories() -> None:
-    cfg = AsgionConfig(categories=frozenset({"http.fsm", "semantic"}))
+    cfg = AsgionConfig(categories=frozenset({"http.fsm", "http.semantic"}))
     assert cfg.allows(_PERF_RULE) is True  # "http.fsm"
-    assert cfg.allows(_WARN_RULE) is True  # "semantic"
+    assert cfg.allows(_WARN_RULE) is True  # "http.semantic"
     assert cfg.allows(_ERR_RULE) is False  # "http.scope" not in categories
 
 
@@ -120,9 +120,9 @@ def test_allows_include_rules_applied_after_categories() -> None:
 
 # AsgionConfig.allows(): include_rules glob patterns
 
-_SEM_RULE = Rule(id="SEM-001", severity=Severity.WARNING, summary="sem rule", layer="semantic")
+_SEM_RULE = Rule(id="SEM-001", severity=Severity.WARNING, summary="sem rule", layer="http.semantic")
 _SEM_PERF_RULE = Rule(
-    id="SEM-006", severity=Severity.PERF, summary="sem perf rule", layer="semantic"
+    id="SEM-006", severity=Severity.PERF, summary="sem perf rule", layer="http.semantic"
 )
 _HF_RULE = Rule(id="HF-001", severity=Severity.ERROR, summary="hf rule", layer="http.fsm")
 
@@ -276,8 +276,8 @@ def test_parse_config_include_rules() -> None:
 
 
 def test_parse_config_categories() -> None:
-    cfg = _parse_config({"categories": ["http.fsm", "semantic"]})
-    assert cfg.categories == frozenset({"http.fsm", "semantic"})
+    cfg = _parse_config({"categories": ["http.fsm", "http.semantic"]})
+    assert cfg.categories == frozenset({"http.fsm", "http.semantic"})
 
 
 def test_parse_config_exclude_rules_non_list_ignored() -> None:
@@ -352,11 +352,11 @@ def test_load_config_explicit_pyproject_toml(tmp_path: Path) -> None:
 def test_load_config_explicit_with_include_and_categories(tmp_path: Path) -> None:
     toml = tmp_path / ".asgion.toml"
     toml.write_bytes(
-        b'include_rules = ["SEM-001", "SEM-002"]\ncategories = ["http.fsm", "semantic"]\n'
+        b'include_rules = ["SEM-001", "SEM-002"]\ncategories = ["http.fsm", "http.semantic"]\n'
     )
     cfg = load_config(toml)
     assert cfg.include_rules == frozenset({"SEM-001", "SEM-002"})
-    assert cfg.categories == frozenset({"http.fsm", "semantic"})
+    assert cfg.categories == frozenset({"http.fsm", "http.semantic"})
 
 
 def test_load_config_nonexistent_path_returns_defaults(tmp_path: Path) -> None:

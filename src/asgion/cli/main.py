@@ -29,7 +29,13 @@ def cli() -> None:
 
 @cli.command()
 @click.argument("app_path")
-@click.option("--url", multiple=True, default=("/",), help="URL paths to check.")
+@click.option(
+    "--path",
+    "paths",
+    multiple=True,
+    default=("/",),
+    help="Paths to check. Default is HTTP. Prefix with protocol to specify type: http:/path, https:/path, ws:/path, wss:/path.",
+)
 @click.option("--strict", is_flag=True, help="Exit 1 on any violations.")
 @click.option(
     "--format",
@@ -62,7 +68,7 @@ def cli() -> None:
 )
 def check(
     app_path: str,
-    url: tuple[str, ...],
+    paths: tuple[str, ...],
     strict: bool,
     fmt: str,
     exclude_rules: str,
@@ -103,7 +109,7 @@ def check(
     report = run_check(
         app,
         app_path=app_path,
-        urls=url,
+        paths=paths,
         config=config,
         exclude_rules=excluded,
         run_lifespan=not no_lifespan,

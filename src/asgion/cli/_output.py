@@ -92,6 +92,8 @@ def format_text(
 def _result_label(result: CheckResult) -> str:
     if result.scope_type == "lifespan":
         return "Lifespan"
+    if result.scope_type == "websocket":
+        return f"WS {result.path}"
     return f"{result.method} {result.path}"
 
 
