@@ -1,5 +1,7 @@
 # asgion
 
+[![CI](https://github.com/ack1d/asgion/actions/workflows/ci.yml/badge.svg)](https://github.com/ack1d/asgion/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/ack1d/asgion/branch/main/graph/badge.svg)](https://codecov.io/gh/ack1d/asgion)
 [![PyPI](https://img.shields.io/pypi/v/asgion)](https://pypi.org/project/asgion/)
 [![Python](https://img.shields.io/pypi/pyversions/asgion)](https://pypi.org/project/asgion/)
 [![License](https://img.shields.io/pypi/l/asgion)](https://github.com/ack1d/asgion/blob/main/LICENSE)
@@ -209,10 +211,10 @@ pytest --asgi-strict --asgi-min-severity warning
 | Feature | asgion | asgiref.testing | Manual testing |
 |---------|--------|-----------------|----------------|
 | Scope validation | 71 rules | basic | none |
-| Event schema checks | 42 rules | none | manual |
-| State machine (FSM) | 35 rules | none | none |
+| Event schema checks | 43 rules | none | manual |
+| State machine (FSM) | 34 rules | none | none |
 | Semantic checks | 13 rules | none | none |
-| Extension validation | 11 rules | none | none |
+| Extension validation | 3 rules | none | none |
 | pytest plugin | yes | no | n/a |
 | Real-time callbacks | yes | no | n/a |
 | CLI tool | yes | no | no |

@@ -1,3 +1,5 @@
+from importlib.metadata import version
+
 from asgion.core._types import Severity
 from asgion.core.config import BUILTIN_PROFILES, AsgionConfig, ConfigError
 from asgion.core.context import ConnectionContext
@@ -6,7 +8,7 @@ from asgion.core.violation import ASGIProtocolError, Violation
 from asgion.core.wrapper import inspect
 from asgion.validators.base import BaseValidator, ValidatorRegistry
 
-__version__ = "0.2.0"
+__version__ = version("asgion")
 
 
 __all__ = [

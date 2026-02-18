@@ -14,18 +14,24 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - run: uv sync --group dev
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-suffix: ${{ github.job }}
+      - run: uv sync --group dev --frozen
       - run: uv run ruff check src/ tests/
       - run: uv run ruff format --check src/ tests/
 
   typecheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - run: uv sync --group dev
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-suffix: ${{ github.job }}
+      - run: uv sync --group dev --frozen
       - run: uv run mypy src/
 
   test:
@@ -34,14 +40,29 @@ jobs:
       matrix:
         python-version: ["3.12", "3.13", "3.14"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
         with:
+          enable-cache: true
+          cache-suffix: ${{ matrix.python-version }}
           python-version: ${{ matrix.python-version }}
-      - run: uv sync --group dev
-      - run: uv run pytest --cov --cov-report=xml
+      - run: uv sync --group dev --frozen
+      - run: uv run pytest -m "not integration" --cov --cov-report=xml
       - if: matrix.python-version == '3.12'
         uses: codecov/codecov-action@v5
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml
         continue-on-error: true
+
+  integration:
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-suffix: ${{ github.job }}
+      - run: uv sync --group dev --group integration --frozen
+      - run: uv run pytest -m integration -v

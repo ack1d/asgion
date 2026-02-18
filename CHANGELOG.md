@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.3.0 (2026-02-19)
+
 ### Breaking Changes
 
 - **Layer names renamed** - `categories` config values must be updated:
@@ -44,6 +46,21 @@
   `BUILTIN_PROFILES` dict or `--profile` CLI flag.
 - **`--config FILE`** and **`--profile PROFILE`** CLI options for `asgion check`.
 - `inspect()` accepts `config=AsgionConfig(...)` parameter.
+
+### Internal
+
+- **CI** - GitHub Actions workflow with four jobs: `lint` (ruff check + format), `typecheck` (mypy),
+  `test` (pytest `-m "not integration"`, matrix 3.12/3.13/3.14, coverage upload to Codecov on 3.12),
+  `integration` (pytest `-m integration`, runs after `test` passes). `uv sync --frozen` everywhere;
+  `astral-sh/setup-uv@v7` with per-job caching (`enable-cache: true`, `cache-suffix`).
+  Actions updated to latest: `actions/checkout@v6`, `astral-sh/setup-uv@v7`.
+- **README** - added CI status badge and Codecov coverage badge.
+- **Integration tests** - complete test suite across three frameworks using each framework's
+  recommended approach: FastAPI (`httpx.AsyncClient` + `ASGITransport`), Litestar
+  (`litestar.testing.AsyncTestClient`), Starlette (`httpx.AsyncClient` + `ASGITransport`, new).
+  Each file skips independently via `pytest.importorskip`.
+- **Detection tests** (`tests/test_detection.py`) - end-to-end tests verifying the full
+  `inspect()` pipeline fires violations for non-compliant raw ASGI apps.
 
 ## 0.2.0 (2026-02-17)
 
