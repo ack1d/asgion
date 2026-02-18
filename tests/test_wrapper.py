@@ -126,7 +126,7 @@ async def test_on_violation_callback_fires():
 
     violations = await _run(app)
     assert len(violations) > 0
-    assert any(v.rule_id == "HE-011" for v in violations)
+    assert any(v.rule_id == "HE-006" for v in violations)
 
 
 async def test_strict_mode_raises():
@@ -161,8 +161,8 @@ async def test_exclude_rules_suppresses():
         await send({"type": "http.response.start", "status": 999, "headers": []})
         await send({"type": "http.response.body", "body": b"OK", "more_body": False})
 
-    violations = await _run(app, exclude_rules={"HE-012"})
-    assert not any(v.rule_id == "HE-012" for v in violations)
+    violations = await _run(app, exclude_rules={"HE-007"})
+    assert not any(v.rule_id == "HE-007" for v in violations)
 
 
 async def test_events_are_recorded():

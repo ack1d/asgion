@@ -1,5 +1,27 @@
 # Changelog
 
+## Unreleased
+
+### Breaking Changes
+
+- **Rule ID renumbering** - all gaps in rule ID sequences eliminated. Affected series:
+  - `HE`: 005->004, 010..028->005..023 (23 rules, sequential)
+  - `HF`: 003..015->002..012 (12 rules, sequential)
+  - `WE`: 002..023->001..016 (16 rules, sequential)
+  - `LE`: 003,004,006->002,003,004 (4 rules, sequential)
+  - Former `EX-001..EX-008` (renamed to `HE-021..HE-028` in the previous step,
+    now `HE-016..HE-023` after renumbering). `EX-009..EX-011` remain unchanged.
+
+### Features
+
+- **AsgionConfig** - configurable rule filtering via `pyproject.toml` or `.asgion.toml`:
+  `min_severity`, `include_rules`, `exclude_rules`, `categories`, thresholds.
+  Supports glob patterns (`"SEM-*"`) in include/exclude lists.
+- **Built-in profiles** (`strict` / `recommended` / `minimal`) available via
+  `BUILTIN_PROFILES` dict or `--profile` CLI flag.
+- **`--config FILE`** and **`--profile PROFILE`** CLI options for `asgion check`.
+- `inspect()` accepts `config=AsgionConfig(...)` parameter.
+
 ## 0.2.0 (2026-02-17)
 
 ### Features
@@ -10,7 +32,7 @@
   (WS-001..WS-025), Lifespan (LS-001..LS-004) — validates all scope dict fields
   per ASGI spec
 - **Extension validator** (layer 10): gate checks for Server Push, Zero Copy Send,
-  Path Send, Early Hints, Debug events (EX-001..EX-011)
+  Path Send, Early Hints, Debug events (EX-009..EX-011; field rules were EX-001..EX-008, now HE-021..HE-028)
 - **Semantic validator** (layer 11): duplicate headers, missing Content-Type,
   Content-Length mismatch, Set-Cookie security, disconnect tracking,
   TTFB/lifecycle/body-size thresholds (SEM-001..SEM-011)

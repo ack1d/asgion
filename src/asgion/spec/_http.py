@@ -181,10 +181,10 @@ HTTP_SPEC = ProtocolSpec(
             hint="state must be a dict",
         ),
     ),
-    invalid_receive_rule_id="HE-005",
+    invalid_receive_rule_id="HE-004",
     invalid_receive_summary="Invalid HTTP receive event type",
     invalid_receive_hint="Expected 'http.request' or 'http.disconnect'",
-    invalid_send_rule_id="HE-019",
+    invalid_send_rule_id="HE-014",
     invalid_send_summary="Invalid HTTP send event type",
     events=(
         EventSpec(
@@ -203,77 +203,77 @@ HTTP_SPEC = ProtocolSpec(
             checks=(
                 FieldRequired(
                     "status",
-                    "HE-010",
+                    "HE-005",
                     summary="http.response.start missing required 'status' field",
                 ),
-                FieldType("status", int, "HE-011"),
+                FieldType("status", int, "HE-006"),
                 FieldValue(
                     "status",
                     _status_range,
-                    "HE-012",
+                    "HE-007",
                     severity=Severity.WARNING,
                     summary="Unusual HTTP status code",
                     hint="Expected status in range 100-599",
                 ),
                 HeadersFormat(
                     "headers",
-                    "HE-013",
-                    lowercase_rule_id="HE-014",
+                    "HE-008",
+                    lowercase_rule_id="HE-009",
                     forbidden=(
                         ForbiddenHeader(
                             b"transfer-encoding",
-                            "HE-015",
+                            "HE-010",
                             hint="ASGI servers manage transfer-encoding automatically",
                         ),
                     ),
                 ),
-                FieldType("trailers", bool, "HE-016", severity=Severity.WARNING),
+                FieldType("trailers", bool, "HE-011", severity=Severity.WARNING),
             ),
         ),
         EventSpec(
             "http.response.body",
             "send",
             checks=(
-                FieldType("body", bytes, "HE-017"),
-                FieldType("more_body", bool, "HE-018", severity=Severity.WARNING),
+                FieldType("body", bytes, "HE-012"),
+                FieldType("more_body", bool, "HE-013", severity=Severity.WARNING),
             ),
         ),
         EventSpec(
             "http.response.trailers",
             "send",
-            checks=(HeadersFormat("headers", "HE-020"),),
+            checks=(HeadersFormat("headers", "HE-015"),),
         ),
         EventSpec(
             "http.response.push",
             "send",
             checks=(
-                FieldRequired("path", "EX-001"),
-                FieldType("path", str, "EX-002"),
-                HeadersFormat("headers", "EX-003"),
+                FieldRequired("path", "HE-016"),
+                FieldType("path", str, "HE-017"),
+                HeadersFormat("headers", "HE-018"),
             ),
         ),
         EventSpec(
             "http.response.zerocopysend",
             "send",
-            checks=(FieldRequired("file", "EX-004"),),
+            checks=(FieldRequired("file", "HE-019"),),
         ),
         EventSpec(
             "http.response.pathsend",
             "send",
             checks=(
-                FieldRequired("path", "EX-005"),
-                FieldType("path", str, "EX-006"),
+                FieldRequired("path", "HE-020"),
+                FieldType("path", str, "HE-021"),
             ),
         ),
         EventSpec(
             "http.response.early_hint",
             "send",
-            checks=(HeadersFormat("headers", "EX-007"),),
+            checks=(HeadersFormat("headers", "HE-022"),),
         ),
         EventSpec(
             "http.response.debug",
             "send",
-            checks=(FieldType("info", dict, "EX-008"),),
+            checks=(FieldType("info", dict, "HE-023"),),
         ),
     ),
 )

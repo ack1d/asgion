@@ -122,29 +122,29 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 
 | ID | Severity | Summary | Hint |
 |----|----------|---------|------|
-| `EX-001` | error | http.response.push missing 'path' field | - |
-| `EX-002` | error | http.response.push['path'] must be str | - |
-| `EX-003` | error | http.response.push headers format invalid | - |
-| `EX-004` | error | http.response.zerocopysend missing 'file' field | - |
-| `EX-005` | error | http.response.pathsend missing 'path' field | - |
-| `EX-006` | error | http.response.pathsend['path'] must be str | - |
-| `EX-007` | error | http.response.early_hint headers format invalid | - |
-| `EX-008` | error | http.response.debug['info'] must be dict | - |
 | `HE-001` | error | http.request missing 'body' field | - |
 | `HE-002` | error | http.request['body'] must be bytes | - |
 | `HE-003` | warning | http.request['more_body'] should be bool | - |
-| `HE-005` | error | Invalid HTTP receive event type | Expected 'http.request' or 'http.disconnect' |
-| `HE-010` | error | http.response.start missing required 'status' field | - |
-| `HE-011` | error | http.response.start['status'] must be int | - |
-| `HE-012` | warning | Unusual HTTP status code | Expected status in range 100-599 |
-| `HE-013` | error | http.response.start headers format invalid | - |
-| `HE-014` | warning | Header name should be lowercase | - |
-| `HE-015` | warning | transfer-encoding header in response | ASGI servers manage transfer-encoding automatically |
-| `HE-016` | warning | http.response.start['trailers'] should be bool | - |
-| `HE-017` | error | http.response.body['body'] must be bytes | - |
-| `HE-018` | warning | http.response.body['more_body'] should be bool | - |
-| `HE-019` | error | Invalid HTTP send event type | Expected one of: http.response.body, http.response.debug, http.response.early_hint, http.response.pathsend, http.response.push, http.response.start, http.response.trailers, http.response.zerocopysend |
-| `HE-020` | error | http.response.trailers headers format invalid | - |
+| `HE-004` | error | Invalid HTTP receive event type | Expected 'http.request' or 'http.disconnect' |
+| `HE-005` | error | http.response.start missing required 'status' field | - |
+| `HE-006` | error | http.response.start['status'] must be int | - |
+| `HE-007` | warning | Unusual HTTP status code | Expected status in range 100-599 |
+| `HE-008` | error | http.response.start headers format invalid | - |
+| `HE-009` | warning | Header name should be lowercase | - |
+| `HE-010` | warning | transfer-encoding header in response | ASGI servers manage transfer-encoding automatically |
+| `HE-011` | warning | http.response.start['trailers'] should be bool | - |
+| `HE-012` | error | http.response.body['body'] must be bytes | - |
+| `HE-013` | warning | http.response.body['more_body'] should be bool | - |
+| `HE-014` | error | Invalid HTTP send event type | Expected one of: http.response.body, http.response.debug, http.response.early_hint, http.response.pathsend, http.response.push, http.response.start, http.response.trailers, http.response.zerocopysend |
+| `HE-015` | error | http.response.trailers headers format invalid | - |
+| `HE-016` | error | http.response.push missing 'path' field | - |
+| `HE-017` | error | http.response.push['path'] must be str | - |
+| `HE-018` | error | http.response.push headers format invalid | - |
+| `HE-019` | error | http.response.zerocopysend missing 'file' field | - |
+| `HE-020` | error | http.response.pathsend missing 'path' field | - |
+| `HE-021` | error | http.response.pathsend['path'] must be str | - |
+| `HE-022` | error | http.response.early_hint headers format invalid | - |
+| `HE-023` | error | http.response.debug['info'] must be dict | - |
 
 ## HTTP State Machine (Layer 7)
 > Spec: <https://asgi.readthedocs.io/en/latest/specs/www.html>
@@ -152,39 +152,39 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 | ID | Severity | Summary | Hint |
 |----|----------|---------|------|
 | `HF-001` | error | http.response.start was never sent | Application must send exactly one http.response.start per request |
-| `HF-003` | error | http.response.body sent without preceding http.response.start | Send http.response.start before any http.response.body |
-| `HF-004` | error | Duplicate http.response.start | http.response.start must be sent exactly once per request |
-| `HF-006` | error | http.response.body sent after response was already completed | Do not send body after more_body=False |
-| `HF-007` | error | Send after client disconnected | Check for http.disconnect before sending response |
-| `HF-008` | info | App exited without completing response body | Ensure http.response.body with more_body=False is sent |
-| `HF-009` | info | Received http.request after body was already complete | After more_body=False, further receives return http.disconnect |
-| `HF-010` | error | trailers=True in response.start but no http.response.trailers sent | Send http.response.trailers after the final response body |
-| `HF-011` | error | Trailers sent without trailers=True in response.start | Set trailers=True in http.response.start to use trailer headers |
-| `HF-012` | info | Streaming response body (more_body=True) | Application is sending chunked response body |
-| `HF-014` | warning | HEAD request response has non-empty body | HEAD responses must not include a body |
-| `HF-015` | warning | Response has body when status code forbids it | 1xx/204/304 responses must not include a body |
+| `HF-002` | error | http.response.body sent without preceding http.response.start | Send http.response.start before any http.response.body |
+| `HF-003` | error | Duplicate http.response.start | http.response.start must be sent exactly once per request |
+| `HF-004` | error | http.response.body sent after response was already completed | Do not send body after more_body=False |
+| `HF-005` | error | Send after client disconnected | Check for http.disconnect before sending response |
+| `HF-006` | info | App exited without completing response body | Ensure http.response.body with more_body=False is sent |
+| `HF-007` | info | Received http.request after body was already complete | After more_body=False, further receives return http.disconnect |
+| `HF-008` | error | trailers=True in response.start but no http.response.trailers sent | Send http.response.trailers after the final response body |
+| `HF-009` | error | Trailers sent without trailers=True in response.start | Set trailers=True in http.response.start to use trailer headers |
+| `HF-010` | info | Streaming response body (more_body=True) | Application is sending chunked response body |
+| `HF-011` | info | HEAD request response has non-empty body | ASGI servers strip body for HEAD; consider doing it in the app for clarity |
+| `HF-012` | warning | Response has body when status code forbids it | 1xx/204/304 responses must not include a body |
 
 ## WebSocket Events (Layer 5)
 > Spec: <https://asgi.readthedocs.io/en/latest/specs/websocket.html>
 
 | ID | Severity | Summary | Hint |
 |----|----------|---------|------|
-| `WE-002` | error | websocket.receive must have exactly one of 'bytes' or 'text' as non-None | Set one to a value and the other to None |
-| `WE-003` | error | websocket.receive['bytes'] must be None or bytes | - |
-| `WE-004` | error | websocket.receive['text'] must be None or str | - |
-| `WE-005` | error | websocket.disconnect['code'] must be int | - |
-| `WE-007` | warning | websocket.disconnect['reason'] should be str or None | - |
-| `WE-010` | warning | websocket.accept['subprotocol'] should be str or None | - |
-| `WE-011` | error | websocket.accept headers format invalid | - |
-| `WE-012` | error | websocket.send must have exactly one of 'bytes' or 'text' as non-None | - |
-| `WE-013` | error | websocket.send['bytes'] must be None or bytes | - |
-| `WE-014` | error | websocket.send['text'] must be None or str | - |
-| `WE-015` | error | websocket.close['code'] must be int | - |
-| `WE-016` | warning | websocket.close['reason'] should be str or None | - |
-| `WE-020` | error | websocket.http.response.start['status'] must be int | - |
-| `WE-021` | error | WS denial response headers format invalid | - |
-| `WE-022` | error | websocket.http.response.body['body'] must be bytes | - |
-| `WE-023` | warning | websocket.http.response.body['more_body'] should be bool | - |
+| `WE-001` | error | websocket.receive must have exactly one of 'bytes' or 'text' as non-None | Set one to a value and the other to None |
+| `WE-002` | error | websocket.receive['bytes'] must be None or bytes | - |
+| `WE-003` | error | websocket.receive['text'] must be None or str | - |
+| `WE-004` | error | websocket.disconnect['code'] must be int | - |
+| `WE-005` | warning | websocket.disconnect['reason'] should be str or None | - |
+| `WE-006` | warning | websocket.accept['subprotocol'] should be str or None | - |
+| `WE-007` | error | websocket.accept headers format invalid | - |
+| `WE-008` | error | websocket.send must have exactly one of 'bytes' or 'text' as non-None | - |
+| `WE-009` | error | websocket.send['bytes'] must be None or bytes | - |
+| `WE-010` | error | websocket.send['text'] must be None or str | - |
+| `WE-011` | error | websocket.close['code'] must be int | - |
+| `WE-012` | warning | websocket.close['reason'] should be str or None | - |
+| `WE-013` | error | websocket.http.response.start['status'] must be int | - |
+| `WE-014` | error | WS denial response headers format invalid | - |
+| `WE-015` | error | websocket.http.response.body['body'] must be bytes | - |
+| `WE-016` | warning | websocket.http.response.body['more_body'] should be bool | - |
 
 ## WebSocket State Machine (Layer 8)
 > Spec: <https://asgi.readthedocs.io/en/latest/specs/websocket.html>
@@ -210,9 +210,9 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 | ID | Severity | Summary | Hint |
 |----|----------|---------|------|
 | `LE-001` | error | Invalid lifespan receive event type | Expected one of: lifespan.shutdown, lifespan.startup |
-| `LE-003` | error | Invalid lifespan send event type | Expected one of: lifespan.shutdown.complete, lifespan.shutdown.failed, lifespan.startup.complete, lifespan.startup.failed |
-| `LE-004` | error | lifespan.startup.failed['message'] must be str | - |
-| `LE-006` | error | lifespan.shutdown.failed['message'] must be str | - |
+| `LE-002` | error | Invalid lifespan send event type | Expected one of: lifespan.shutdown.complete, lifespan.shutdown.failed, lifespan.startup.complete, lifespan.startup.failed |
+| `LE-003` | error | lifespan.startup.failed['message'] must be str | - |
+| `LE-004` | error | lifespan.shutdown.failed['message'] must be str | - |
 
 ## Lifespan State Machine (Layer 9)
 > Spec: <https://asgi.readthedocs.io/en/latest/specs/lifespan.html>

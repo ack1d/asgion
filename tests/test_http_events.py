@@ -84,7 +84,7 @@ def test_he003_more_body_valid(validator: SpecEventValidator, msg: dict[str, obj
     assert he003 == []
 
 
-# --- HE-005: invalid receive event type ---
+# --- HE-004: invalid receive event type ---
 
 
 @pytest.mark.parametrize(
@@ -99,7 +99,7 @@ def test_he003_more_body_valid(validator: SpecEventValidator, msg: dict[str, obj
 def test_he005_invalid_receive_type(validator: SpecEventValidator, msg: dict[str, object]) -> None:
     ctx = make_http_ctx()
     validator.validate_receive(ctx, msg)
-    v = assert_violation(ctx, "HE-005")
+    v = assert_violation(ctx, "HE-004")
     assert v.severity == "error"
 
 
@@ -113,28 +113,28 @@ def test_he005_invalid_receive_type(validator: SpecEventValidator, msg: dict[str
 def test_he005_valid_receive_type(validator: SpecEventValidator, msg: dict[str, object]) -> None:
     ctx = make_http_ctx()
     validator.validate_receive(ctx, msg)
-    he005 = [v for v in ctx.violations if v.rule_id == "HE-005"]
+    he005 = [v for v in ctx.violations if v.rule_id == "HE-004"]
     assert he005 == []
 
 
-# --- HE-010: missing status ---
+# --- HE-004: missing status ---
 
 
 def test_he010_missing_status(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_send(ctx, {"type": "http.response.start", "headers": []})
-    v = assert_violation(ctx, "HE-010")
+    v = assert_violation(ctx, "HE-005")
     assert v.severity == "error"
 
 
 def test_he010_status_present(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_send(ctx, {"type": "http.response.start", "status": 200, "headers": []})
-    he010 = [v for v in ctx.violations if v.rule_id == "HE-010"]
+    he010 = [v for v in ctx.violations if v.rule_id == "HE-005"]
     assert he010 == []
 
 
-# --- HE-011: status must be int ---
+# --- HE-006: status must be int ---
 
 
 @pytest.mark.parametrize(
@@ -151,7 +151,7 @@ def test_he011_status_not_int(validator: SpecEventValidator, status: object) -> 
         ctx,
         {"type": "http.response.start", "status": status, "headers": []},
     )
-    v = assert_violation(ctx, "HE-011")
+    v = assert_violation(ctx, "HE-006")
     assert v.severity == "error"
 
 
@@ -161,11 +161,11 @@ def test_he011_status_is_int(validator: SpecEventValidator) -> None:
         ctx,
         {"type": "http.response.start", "status": 404, "headers": []},
     )
-    he011 = [v for v in ctx.violations if v.rule_id == "HE-011"]
+    he011 = [v for v in ctx.violations if v.rule_id == "HE-006"]
     assert he011 == []
 
 
-# --- HE-012: status range ---
+# --- HE-007: status range ---
 
 
 @pytest.mark.parametrize(
@@ -186,12 +186,12 @@ def test_he012_status_range(validator: SpecEventValidator, status: int, should_f
         ctx,
         {"type": "http.response.start", "status": status, "headers": []},
     )
-    he012 = [v for v in ctx.violations if v.rule_id == "HE-012"]
+    he012 = [v for v in ctx.violations if v.rule_id == "HE-007"]
     if should_fire:
-        assert he012, f"Expected HE-012 for status={status}"
+        assert he012, f"Expected HE-007 for status={status}"
         assert he012[0].severity == "warning"
     else:
-        assert not he012, f"Did not expect HE-012 for status={status}"
+        assert not he012, f"Did not expect HE-007 for status={status}"
 
 
 def test_he012_status_not_int_skipped(validator: SpecEventValidator) -> None:
@@ -200,11 +200,11 @@ def test_he012_status_not_int_skipped(validator: SpecEventValidator) -> None:
         ctx,
         {"type": "http.response.start", "status": "200", "headers": []},
     )
-    he012 = [v for v in ctx.violations if v.rule_id == "HE-012"]
+    he012 = [v for v in ctx.violations if v.rule_id == "HE-007"]
     assert he012 == []
 
 
-# --- HE-013: header validation ---
+# --- HE-008: header validation ---
 
 
 @pytest.mark.parametrize(
@@ -223,7 +223,7 @@ def test_he013_invalid_headers(validator: SpecEventValidator, headers: object) -
         ctx,
         {"type": "http.response.start", "status": 200, "headers": headers},
     )
-    v = assert_violation(ctx, "HE-013")
+    v = assert_violation(ctx, "HE-008")
     assert v.severity == "error"
 
 
@@ -241,11 +241,11 @@ def test_he013_valid_headers(validator: SpecEventValidator, headers: object) -> 
         ctx,
         {"type": "http.response.start", "status": 200, "headers": headers},
     )
-    he013 = [v for v in ctx.violations if v.rule_id == "HE-013"]
+    he013 = [v for v in ctx.violations if v.rule_id == "HE-008"]
     assert he013 == []
 
 
-# --- HE-014: uppercase headers ---
+# --- HE-009: uppercase headers ---
 
 
 @pytest.mark.parametrize(
@@ -265,7 +265,7 @@ def test_he014_uppercase_header(validator: SpecEventValidator, header_name: byte
             "headers": [(header_name, b"value")],
         },
     )
-    v = assert_violation(ctx, "HE-014")
+    v = assert_violation(ctx, "HE-009")
     assert v.severity == "warning"
 
 
@@ -279,11 +279,11 @@ def test_he014_lowercase_header(validator: SpecEventValidator) -> None:
             "headers": [(b"content-type", b"text/plain")],
         },
     )
-    he014 = [v for v in ctx.violations if v.rule_id == "HE-014"]
+    he014 = [v for v in ctx.violations if v.rule_id == "HE-009"]
     assert he014 == []
 
 
-# --- HE-015: transfer-encoding ---
+# --- HE-005: transfer-encoding ---
 
 
 def test_he015_transfer_encoding_present(validator: SpecEventValidator) -> None:
@@ -296,7 +296,7 @@ def test_he015_transfer_encoding_present(validator: SpecEventValidator) -> None:
             "headers": [(b"transfer-encoding", b"chunked")],
         },
     )
-    v = assert_violation(ctx, "HE-015")
+    v = assert_violation(ctx, "HE-010")
     assert v.severity == "warning"
 
 
@@ -310,7 +310,7 @@ def test_he015_transfer_encoding_mixed_case(validator: SpecEventValidator) -> No
             "headers": [(b"Transfer-Encoding", b"chunked")],
         },
     )
-    assert_violation(ctx, "HE-015")
+    assert_violation(ctx, "HE-010")
 
 
 def test_he015_no_transfer_encoding(validator: SpecEventValidator) -> None:
@@ -323,11 +323,11 @@ def test_he015_no_transfer_encoding(validator: SpecEventValidator) -> None:
             "headers": [(b"content-type", b"text/html")],
         },
     )
-    he015 = [v for v in ctx.violations if v.rule_id == "HE-015"]
+    he015 = [v for v in ctx.violations if v.rule_id == "HE-010"]
     assert he015 == []
 
 
-# --- HE-016: trailers must be bool ---
+# --- HE-006: trailers must be bool ---
 
 
 @pytest.mark.parametrize(
@@ -348,7 +348,7 @@ def test_he016_trailers_not_bool(validator: SpecEventValidator, trailers: object
             "trailers": trailers,
         },
     )
-    v = assert_violation(ctx, "HE-016")
+    v = assert_violation(ctx, "HE-011")
     assert v.severity == "warning"
 
 
@@ -382,11 +382,11 @@ def test_he016_trailers_not_bool(validator: SpecEventValidator, trailers: object
 def test_he016_trailers_valid(validator: SpecEventValidator, msg: dict[str, object]) -> None:
     ctx = make_http_ctx()
     validator.validate_send(ctx, msg)
-    he016 = [v for v in ctx.violations if v.rule_id == "HE-016"]
+    he016 = [v for v in ctx.violations if v.rule_id == "HE-011"]
     assert he016 == []
 
 
-# --- HE-017: response body must be bytes ---
+# --- HE-007: response body must be bytes ---
 
 
 @pytest.mark.parametrize(
@@ -399,7 +399,7 @@ def test_he016_trailers_valid(validator: SpecEventValidator, msg: dict[str, obje
 def test_he017_body_not_bytes(validator: SpecEventValidator, body: object) -> None:
     ctx = make_http_ctx()
     validator.validate_send(ctx, {"type": "http.response.body", "body": body})
-    v = assert_violation(ctx, "HE-017")
+    v = assert_violation(ctx, "HE-012")
     assert v.severity == "error"
 
 
@@ -414,11 +414,11 @@ def test_he017_body_not_bytes(validator: SpecEventValidator, body: object) -> No
 def test_he017_body_valid(validator: SpecEventValidator, msg: dict[str, object]) -> None:
     ctx = make_http_ctx()
     validator.validate_send(ctx, msg)
-    he017 = [v for v in ctx.violations if v.rule_id == "HE-017"]
+    he017 = [v for v in ctx.violations if v.rule_id == "HE-012"]
     assert he017 == []
 
 
-# --- HE-018: response more_body must be bool ---
+# --- HE-008: response more_body must be bool ---
 
 
 @pytest.mark.parametrize(
@@ -434,7 +434,7 @@ def test_he018_more_body_not_bool(validator: SpecEventValidator, more_body: obje
         ctx,
         {"type": "http.response.body", "body": b"", "more_body": more_body},
     )
-    v = assert_violation(ctx, "HE-018")
+    v = assert_violation(ctx, "HE-013")
     assert v.severity == "warning"
 
 
@@ -454,11 +454,11 @@ def test_he018_more_body_not_bool(validator: SpecEventValidator, more_body: obje
 def test_he018_more_body_valid(validator: SpecEventValidator, msg: dict[str, object]) -> None:
     ctx = make_http_ctx()
     validator.validate_send(ctx, msg)
-    he018 = [v for v in ctx.violations if v.rule_id == "HE-018"]
+    he018 = [v for v in ctx.violations if v.rule_id == "HE-013"]
     assert he018 == []
 
 
-# --- HE-019: invalid send event type ---
+# --- HE-009: invalid send event type ---
 
 
 @pytest.mark.parametrize(
@@ -473,7 +473,7 @@ def test_he018_more_body_valid(validator: SpecEventValidator, msg: dict[str, obj
 def test_he019_invalid_send_type(validator: SpecEventValidator, msg: dict[str, object]) -> None:
     ctx = make_http_ctx()
     validator.validate_send(ctx, msg)
-    v = assert_violation(ctx, "HE-019")
+    v = assert_violation(ctx, "HE-014")
     assert v.severity == "error"
 
 
@@ -495,7 +495,7 @@ def test_he019_invalid_send_type(validator: SpecEventValidator, msg: dict[str, o
 def test_he019_valid_send_type(validator: SpecEventValidator, msg: dict[str, object]) -> None:
     ctx = make_http_ctx()
     validator.validate_send(ctx, msg)
-    he019 = [v for v in ctx.violations if v.rule_id == "HE-019"]
+    he019 = [v for v in ctx.violations if v.rule_id == "HE-014"]
     assert he019 == []
 
 
@@ -572,9 +572,9 @@ def test_multiple_violations_single_message(validator: SpecEventValidator) -> No
         },
     )
     rule_ids = {v.rule_id for v in ctx.violations}
+    assert "HE-006" in rule_ids
+    assert "HE-008" in rule_ids
     assert "HE-011" in rule_ids
-    assert "HE-013" in rule_ids
-    assert "HE-016" in rule_ids
 
 
 def test_he001_and_he002_both_fire_when_body_missing(

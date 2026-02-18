@@ -35,7 +35,7 @@ LIFESPAN_SPEC = ProtocolSpec(
     ),
     invalid_receive_rule_id="LE-001",
     invalid_receive_summary="Invalid lifespan receive event type",
-    invalid_send_rule_id="LE-003",
+    invalid_send_rule_id="LE-002",
     invalid_send_summary="Invalid lifespan send event type",
     events=(
         EventSpec("lifespan.startup", "receive"),
@@ -44,13 +44,13 @@ LIFESPAN_SPEC = ProtocolSpec(
         EventSpec(
             "lifespan.startup.failed",
             "send",
-            checks=(FieldType("message", str, "LE-004"),),
+            checks=(FieldType("message", str, "LE-003"),),
         ),
         EventSpec("lifespan.shutdown.complete", "send"),
         EventSpec(
             "lifespan.shutdown.failed",
             "send",
-            checks=(FieldType("message", str, "LE-006"),),
+            checks=(FieldType("message", str, "LE-004"),),
         ),
     ),
 )

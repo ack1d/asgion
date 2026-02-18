@@ -92,13 +92,13 @@ class TestOutput:
 
     def test_text_with_violations(self) -> None:
         v = Violation(
-            rule_id="HE-012",
+            rule_id="HE-007",
             severity=Severity.WARNING,
             message="Unusual status",
             hint="Check status code",
         )
         text = format_text(self._make_report(violations=[v]), no_color=True)
-        assert "HE-012" in text
+        assert "HE-007" in text
         assert "warning" in text
         assert "hint: Check status code" in text
         assert "1 violation" in text

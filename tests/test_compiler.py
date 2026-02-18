@@ -483,7 +483,7 @@ def test_http_spec_compiles() -> None:
     assert "http.response.start" in compiled.send_dispatch
     assert "http.response.body" in compiled.send_dispatch
     assert compiled.invalid_receive_rule is not None
-    assert compiled.invalid_receive_rule.id == "HE-005"
+    assert compiled.invalid_receive_rule.id == "HE-004"
 
 
 def test_websocket_spec_compiles() -> None:
@@ -507,7 +507,7 @@ def test_lifespan_spec_compiles() -> None:
     assert compiled.invalid_receive_rule is not None
     assert compiled.invalid_receive_rule.id == "LE-001"
     assert compiled.invalid_send_rule is not None
-    assert compiled.invalid_send_rule.id == "LE-003"
+    assert compiled.invalid_send_rule.id == "LE-002"
 
 
 def test_all_specs_total_rules() -> None:

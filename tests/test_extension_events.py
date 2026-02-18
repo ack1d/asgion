@@ -18,13 +18,13 @@ def ext_validator() -> ExtensionValidator:
     return ExtensionValidator()
 
 
-# --- HE-020: trailers headers format ---
+# --- HE-015: trailers headers format ---
 
 
 def test_he020_trailers_bad_headers(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_send(ctx, {"type": "http.response.trailers", "headers": "bad"})
-    assert_violation(ctx, "HE-020")
+    assert_violation(ctx, "HE-015")
 
 
 def test_he020_trailers_valid_headers(validator: SpecEventValidator) -> None:
@@ -32,33 +32,33 @@ def test_he020_trailers_valid_headers(validator: SpecEventValidator) -> None:
     validator.validate_send(
         ctx, {"type": "http.response.trailers", "headers": [(b"checksum", b"abc")]}
     )
-    matching = [v for v in ctx.violations if v.rule_id == "HE-020"]
+    matching = [v for v in ctx.violations if v.rule_id == "HE-015"]
     assert matching == []
 
 
-# --- EX-001/002/003: http.response.push ---
+# --- HE-016/022/023: http.response.push ---
 
 
-def test_ex001_push_missing_path(validator: SpecEventValidator) -> None:
+def test_he021_push_missing_path(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_send(ctx, {"type": "http.response.push", "headers": []})
-    assert_violation(ctx, "EX-001")
+    assert_violation(ctx, "HE-016")
 
 
-def test_ex002_push_path_wrong_type(validator: SpecEventValidator) -> None:
+def test_he022_push_path_wrong_type(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_send(
         ctx, {"type": "http.response.push", "path": b"/resource", "headers": []}
     )
-    assert_violation(ctx, "EX-002")
+    assert_violation(ctx, "HE-017")
 
 
-def test_ex003_push_headers_bad(validator: SpecEventValidator) -> None:
+def test_he023_push_headers_bad(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_send(
         ctx, {"type": "http.response.push", "path": "/resource", "headers": "bad"}
     )
-    assert_violation(ctx, "EX-003")
+    assert_violation(ctx, "HE-018")
 
 
 def test_push_valid(validator: SpecEventValidator) -> None:
@@ -67,13 +67,13 @@ def test_push_valid(validator: SpecEventValidator) -> None:
     assert_no_violations(ctx)
 
 
-# --- EX-004: http.response.zerocopysend ---
+# --- HE-019: http.response.zerocopysend ---
 
 
-def test_ex004_zerocopysend_missing_file(validator: SpecEventValidator) -> None:
+def test_he024_zerocopysend_missing_file(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_send(ctx, {"type": "http.response.zerocopysend"})
-    assert_violation(ctx, "EX-004")
+    assert_violation(ctx, "HE-019")
 
 
 def test_zerocopysend_valid(validator: SpecEventValidator) -> None:
@@ -82,19 +82,19 @@ def test_zerocopysend_valid(validator: SpecEventValidator) -> None:
     assert_no_violations(ctx)
 
 
-# --- EX-005/006: http.response.pathsend ---
+# --- HE-020/026: http.response.pathsend ---
 
 
-def test_ex005_pathsend_missing_path(validator: SpecEventValidator) -> None:
+def test_he025_pathsend_missing_path(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_send(ctx, {"type": "http.response.pathsend"})
-    assert_violation(ctx, "EX-005")
+    assert_violation(ctx, "HE-020")
 
 
-def test_ex006_pathsend_path_wrong_type(validator: SpecEventValidator) -> None:
+def test_he026_pathsend_path_wrong_type(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_send(ctx, {"type": "http.response.pathsend", "path": 123})
-    assert_violation(ctx, "EX-006")
+    assert_violation(ctx, "HE-021")
 
 
 def test_pathsend_valid(validator: SpecEventValidator) -> None:
@@ -103,13 +103,13 @@ def test_pathsend_valid(validator: SpecEventValidator) -> None:
     assert_no_violations(ctx)
 
 
-# --- EX-007: http.response.early_hint ---
+# --- HE-022: http.response.early_hint ---
 
 
-def test_ex007_early_hint_headers_bad(validator: SpecEventValidator) -> None:
+def test_he027_early_hint_headers_bad(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_send(ctx, {"type": "http.response.early_hint", "headers": 42})
-    assert_violation(ctx, "EX-007")
+    assert_violation(ctx, "HE-022")
 
 
 def test_early_hint_valid(validator: SpecEventValidator) -> None:
@@ -120,13 +120,13 @@ def test_early_hint_valid(validator: SpecEventValidator) -> None:
     assert_no_violations(ctx)
 
 
-# --- EX-008: http.response.debug ---
+# --- HE-023: http.response.debug ---
 
 
-def test_ex008_debug_info_wrong_type(validator: SpecEventValidator) -> None:
+def test_he028_debug_info_wrong_type(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_send(ctx, {"type": "http.response.debug", "info": "not dict"})
-    assert_violation(ctx, "EX-008")
+    assert_violation(ctx, "HE-023")
 
 
 def test_debug_valid(validator: SpecEventValidator) -> None:

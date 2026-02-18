@@ -152,12 +152,12 @@ WS_SPEC = ProtocolSpec(
             "websocket.receive",
             "receive",
             checks=(
-                FieldType("bytes", bytes, "WE-003", nullable=True),
-                FieldType("text", str, "WE-004", nullable=True),
+                FieldType("bytes", bytes, "WE-002", nullable=True),
+                FieldType("text", str, "WE-003", nullable=True),
                 ExactlyOneNonNull(
                     "bytes",
                     "text",
-                    "WE-002",
+                    "WE-001",
                     hint="Set one to a value and the other to None",
                 ),
             ),
@@ -166,8 +166,8 @@ WS_SPEC = ProtocolSpec(
             "websocket.disconnect",
             "receive",
             checks=(
-                FieldType("code", int, "WE-005"),
-                FieldType("reason", str, "WE-007", nullable=True, severity=Severity.WARNING),
+                FieldType("code", int, "WE-004"),
+                FieldType("reason", str, "WE-005", nullable=True, severity=Severity.WARNING),
             ),
         ),
         EventSpec("websocket.connect", "receive"),
@@ -175,35 +175,35 @@ WS_SPEC = ProtocolSpec(
             "websocket.accept",
             "send",
             checks=(
-                FieldType("subprotocol", str, "WE-010", nullable=True, severity=Severity.WARNING),
-                HeadersFormat("headers", "WE-011"),
+                FieldType("subprotocol", str, "WE-006", nullable=True, severity=Severity.WARNING),
+                HeadersFormat("headers", "WE-007"),
             ),
         ),
         EventSpec(
             "websocket.send",
             "send",
             checks=(
-                FieldType("bytes", bytes, "WE-013", nullable=True),
-                FieldType("text", str, "WE-014", nullable=True),
-                ExactlyOneNonNull("bytes", "text", "WE-012"),
+                FieldType("bytes", bytes, "WE-009", nullable=True),
+                FieldType("text", str, "WE-010", nullable=True),
+                ExactlyOneNonNull("bytes", "text", "WE-008"),
             ),
         ),
         EventSpec(
             "websocket.close",
             "send",
             checks=(
-                FieldType("code", int, "WE-015"),
-                FieldType("reason", str, "WE-016", nullable=True, severity=Severity.WARNING),
+                FieldType("code", int, "WE-011"),
+                FieldType("reason", str, "WE-012", nullable=True, severity=Severity.WARNING),
             ),
         ),
         EventSpec(
             "websocket.http.response.start",
             "send",
             checks=(
-                FieldType("status", int, "WE-020"),
+                FieldType("status", int, "WE-013"),
                 HeadersFormat(
                     "headers",
-                    "WE-021",
+                    "WE-014",
                     summary="WS denial response headers format invalid",
                 ),
             ),
@@ -212,8 +212,8 @@ WS_SPEC = ProtocolSpec(
             "websocket.http.response.body",
             "send",
             checks=(
-                FieldType("body", bytes, "WE-022"),
-                FieldType("more_body", bool, "WE-023", severity=Severity.WARNING),
+                FieldType("body", bytes, "WE-015"),
+                FieldType("more_body", bool, "WE-016", severity=Severity.WARNING),
             ),
         ),
     ),

@@ -51,7 +51,7 @@ def test_le001_valid_receive_no_violation(validator: SpecEventValidator, event_t
 def test_le003_invalid_send_type(validator: SpecEventValidator, event_type: str) -> None:
     ctx = make_lifespan_ctx()
     validator.validate_send(ctx, {"type": event_type})
-    v = assert_violation(ctx, "LE-003")
+    v = assert_violation(ctx, "LE-002")
     assert v.severity == "error"
 
 
@@ -86,21 +86,21 @@ def test_le004_startup_failed_message_invalid_type(
 ) -> None:
     ctx = make_lifespan_ctx()
     validator.validate_send(ctx, {"type": "lifespan.startup.failed", "message": message})
-    v = assert_violation(ctx, "LE-004")
+    v = assert_violation(ctx, "LE-003")
     assert v.severity == "error"
 
 
 def test_le004_startup_failed_message_str_passes(validator: SpecEventValidator) -> None:
     ctx = make_lifespan_ctx()
     validator.validate_send(ctx, {"type": "lifespan.startup.failed", "message": "startup error"})
-    matching = [v for v in ctx.violations if v.rule_id == "LE-004"]
+    matching = [v for v in ctx.violations if v.rule_id == "LE-003"]
     assert matching == []
 
 
 def test_le004_startup_failed_message_absent_passes(validator: SpecEventValidator) -> None:
     ctx = make_lifespan_ctx()
     validator.validate_send(ctx, {"type": "lifespan.startup.failed"})
-    matching = [v for v in ctx.violations if v.rule_id == "LE-004"]
+    matching = [v for v in ctx.violations if v.rule_id == "LE-003"]
     assert matching == []
 
 
@@ -118,19 +118,19 @@ def test_le006_shutdown_failed_message_invalid_type(
 ) -> None:
     ctx = make_lifespan_ctx()
     validator.validate_send(ctx, {"type": "lifespan.shutdown.failed", "message": message})
-    v = assert_violation(ctx, "LE-006")
+    v = assert_violation(ctx, "LE-004")
     assert v.severity == "error"
 
 
 def test_le006_shutdown_failed_message_str_passes(validator: SpecEventValidator) -> None:
     ctx = make_lifespan_ctx()
     validator.validate_send(ctx, {"type": "lifespan.shutdown.failed", "message": "shutdown error"})
-    matching = [v for v in ctx.violations if v.rule_id == "LE-006"]
+    matching = [v for v in ctx.violations if v.rule_id == "LE-004"]
     assert matching == []
 
 
 def test_le006_shutdown_failed_message_absent_passes(validator: SpecEventValidator) -> None:
     ctx = make_lifespan_ctx()
     validator.validate_send(ctx, {"type": "lifespan.shutdown.failed"})
-    matching = [v for v in ctx.violations if v.rule_id == "LE-006"]
+    matching = [v for v in ctx.violations if v.rule_id == "LE-004"]
     assert matching == []

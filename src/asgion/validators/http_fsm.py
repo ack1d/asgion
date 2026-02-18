@@ -2,8 +2,10 @@ from asgion.core._types import HTTPPhase, Message, ScopeType
 from asgion.core.context import ConnectionContext
 from asgion.rules.http_fsm import (
     HF_001,
+    HF_002,
     HF_003,
     HF_004,
+    HF_005,
     HF_006,
     HF_007,
     HF_008,
@@ -11,8 +13,6 @@ from asgion.rules.http_fsm import (
     HF_010,
     HF_011,
     HF_012,
-    HF_014,
-    HF_015,
 )
 from asgion.validators.base import BaseValidator
 
@@ -28,7 +28,7 @@ class HTTPFSMValidator(BaseValidator):
             more_body = message.get("more_body", False)
 
             if ctx.http.request_body_complete:
-                ctx.violation(HF_009)
+                ctx.violation(HF_007)
                 return
 
             if ctx.http.phase == HTTPPhase.WAITING:
@@ -67,11 +67,11 @@ class HTTPFSMValidator(BaseValidator):
             return
 
         if not ctx.http.body_complete:
-            ctx.violation(HF_008)
+            ctx.violation(HF_006)
             return
 
         if ctx.http.response_has_trailers and not ctx.http.trailers_sent:
-            ctx.violation(HF_010)
+            ctx.violation(HF_008)
 
     def _validate_response_start(self, ctx: ConnectionContext, message: Message) -> None:
         assert ctx.http is not None
@@ -82,7 +82,7 @@ class HTTPFSMValidator(BaseValidator):
 
         if ctx.http.disconnected:
             ctx.violation(
-                HF_007,
+                HF_005,
                 "http.response.start sent after client disconnected",
                 disconnect_time=ctx.elapsed,
             )
@@ -90,7 +90,7 @@ class HTTPFSMValidator(BaseValidator):
 
         if ctx.http.response_start_count > 1:
             ctx.violation(
-                HF_004,
+                HF_003,
                 f"Duplicate http.response.start (count: {ctx.http.response_start_count})",
                 first_status=ctx.http.response_status,
                 second_status=status,
@@ -106,16 +106,16 @@ class HTTPFSMValidator(BaseValidator):
         body_len = len(body) if isinstance(body, bytes | str) else 0
 
         if ctx.http.disconnected:
-            ctx.violation(HF_007, "http.response.body sent after client disconnected")
+            ctx.violation(HF_005, "http.response.body sent after client disconnected")
             return
 
         if ctx.http.response_start_count == 0:
-            ctx.violation(HF_003)
+            ctx.violation(HF_002)
             return
 
         if ctx.http.body_complete:
             ctx.violation(
-                HF_006,
+                HF_004,
                 chunks_after_complete=ctx.http.body_chunks_sent,
             )
             return
@@ -126,7 +126,7 @@ class HTTPFSMValidator(BaseValidator):
 
         if more_body:
             if ctx.http.body_chunks_sent == 1:
-                ctx.violation(HF_012)
+                ctx.violation(HF_010)
             return
 
         if not more_body:
@@ -135,15 +135,15 @@ class HTTPFSMValidator(BaseValidator):
 
             if ctx.method == "HEAD" and ctx.http.total_body_bytes > 0:
                 ctx.violation(
-                    HF_014,
+                    HF_011,
                     f"HEAD request response has non-empty body ({ctx.http.total_body_bytes} bytes)",
                 )
 
-            if ctx.http.response_status in (204, 304) or (
-                100 <= ctx.http.response_status < 200 and ctx.http.total_body_bytes > 0
+            if ctx.http.total_body_bytes > 0 and (
+                ctx.http.response_status in (204, 304) or 100 <= ctx.http.response_status < 200
             ):
                 ctx.violation(
-                    HF_015,
+                    HF_012,
                     f"Status {ctx.http.response_status} response has body ({ctx.http.total_body_bytes} bytes)",
                 )
 
@@ -152,4 +152,4 @@ class HTTPFSMValidator(BaseValidator):
         ctx.http.trailers_sent = True
 
         if not ctx.http.response_has_trailers:
-            ctx.violation(HF_011)
+            ctx.violation(HF_009)

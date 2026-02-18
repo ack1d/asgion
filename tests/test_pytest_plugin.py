@@ -34,7 +34,7 @@ async def _bad_app(scope: dict, receive: object, send: object) -> None:  # type:
             "headers": [(b"content-type", b"text/plain")],
         }
     )
-    # Send body with string instead of bytes — triggers HE-017
+    # Send body with string instead of bytes — triggers HE-012
     await snd({"type": "http.response.body", "body": "not bytes"})
 
 
@@ -98,14 +98,14 @@ async def test_inspected_app_collects_violations() -> None:
     await _drive(inspected)
     assert len(inspected.violations) > 0
     rule_ids = {v.rule_id for v in inspected.violations}
-    assert "HE-017" in rule_ids
+    assert "HE-012" in rule_ids
 
 
 async def test_inspected_app_exclude_rules() -> None:
-    inspected = _make_inspected_app(_bad_app, exclude_rules={"HE-017"})
+    inspected = _make_inspected_app(_bad_app, exclude_rules={"HE-012"})
     await _drive(inspected)
     rule_ids = {v.rule_id for v in inspected.violations}
-    assert "HE-017" not in rule_ids
+    assert "HE-012" not in rule_ids
 
 
 def test_inspected_app_is_callable() -> None:
@@ -121,7 +121,7 @@ def test_format_violation_with_method_and_path() -> None:
     from asgion.core.violation import Violation
 
     v = Violation(
-        rule_id="HE-017",
+        rule_id="HE-012",
         severity="error",
         message="body must be bytes",
         hint="Use bytes, not str",
@@ -131,7 +131,7 @@ def test_format_violation_with_method_and_path() -> None:
     )
     formatted = _format_violation(v)
     assert "(GET /test)" in formatted
-    assert "[HE-017]" in formatted
+    assert "[HE-012]" in formatted
     assert "hint: Use bytes, not str" in formatted
 
 
@@ -202,12 +202,12 @@ async def test_marker_passes_on_good_app(asgi_inspect: object) -> None:
     # No assertion — the marker teardown should pass (no error-level violations)
 
 
-@pytest.mark.asgi_validate(exclude_rules={"HE-017"}, min_severity="error")
+@pytest.mark.asgi_validate(exclude_rules={"HE-012"}, min_severity="error")
 async def test_marker_exclude_rules(asgi_inspect: object) -> None:
     factory = asgi_inspect  # type: ignore[operator]
     app = factory(_bad_app)
     await _drive(app)
-    # HE-017 excluded on marker — teardown should pass
+    # HE-012 excluded on marker — teardown should pass
 
 
 # --- --asgi-strict flag (tested via pytester-like pattern) ---
@@ -284,7 +284,7 @@ async def test_bad(asgi_inspect):
     result = pytester.runpytest_subprocess()
     result.assert_outcomes(failed=1)
     result.stdout.fnmatch_lines(["*ASGI violations detected*"])
-    result.stdout.fnmatch_lines(["*HE-017*"])
+    result.stdout.fnmatch_lines(["*HE-012*"])
     result.stdout.fnmatch_lines(["*POST /api/users*"])
 
 
@@ -306,14 +306,14 @@ def test_pytester_marker_exclude_rules(pytester: pytest.Pytester) -> None:
     pytester.makepyfile(f"""
 {_APP_CODE}
 
-@pytest.mark.asgi_validate(exclude_rules={{"HE-017"}}, min_severity="error")
+@pytest.mark.asgi_validate(exclude_rules={{"HE-012"}}, min_severity="error")
 async def test_excluded(asgi_inspect):
     app = asgi_inspect(_bad_app)
     await _drive(app)
 """)
     pytester.makeini("[pytest]\nasyncio_mode = auto\n")
     result = pytester.runpytest_subprocess()
-    # HE-017 excluded, remaining violations may be below error threshold
+    # HE-012 excluded, remaining violations may be below error threshold
     result.assert_outcomes(passed=1)
 
 
