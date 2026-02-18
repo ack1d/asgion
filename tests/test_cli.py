@@ -108,8 +108,10 @@ class TestOutput:
         out = format_json(self._make_report(violations=[v]))
         data = json.loads(out)
         assert data["summary"]["total"] == 1
+        assert data["summary"]["unique"] == 1
         assert data["summary"]["error"] == 1
         assert data["violations"][0]["rule_id"] == "G-001"
+        assert data["violations"][0]["count"] == 1
 
     def test_json_min_severity(self) -> None:
         v1 = Violation(rule_id="X-001", severity=Severity.PERF, message="perf")
@@ -117,6 +119,73 @@ class TestOutput:
         out = format_json(self._make_report(violations=[v1, v2]), min_severity=Severity.ERROR)
         data = json.loads(out)
         assert data["summary"]["total"] == 1
+
+    def _make_multi_url_report(self, violation: Violation) -> CheckReport:
+        """Two URL results with the same violation."""
+        return CheckReport(
+            app_path="myapp:app",
+            results=[
+                CheckResult("http", path="/a", method="GET", violations=[violation]),
+                CheckResult("http", path="/b", method="GET", violations=[violation]),
+            ],
+        )
+
+    def test_text_dedup_same_as_reference(self) -> None:
+        v = Violation(rule_id="HF-001", severity=Severity.ERROR, message="No response sent")
+        text = format_text(self._make_multi_url_report(v), no_color=True)
+        # violation shown fully in first section
+        assert "HF-001" in text
+        # second occurrence references the first
+        assert "same as GET /a" in text
+        # summary shows dedup info
+        assert "1 unique" in text
+
+    def test_text_dedup_different_messages_not_grouped(self) -> None:
+        v1 = Violation(rule_id="HF-001", severity=Severity.ERROR, message="msg A")
+        v2 = Violation(rule_id="HF-001", severity=Severity.ERROR, message="msg B")
+        report = CheckReport(
+            app_path="myapp:app",
+            results=[
+                CheckResult("http", path="/a", method="GET", violations=[v1]),
+                CheckResult("http", path="/b", method="GET", violations=[v2]),
+            ],
+        )
+        text = format_text(report, no_color=True)
+        # Different messages — both shown fully, no dedup
+        assert "msg A" in text
+        assert "msg B" in text
+        assert "same as" not in text
+
+    def test_json_dedup_count_and_paths(self) -> None:
+        v = Violation(
+            rule_id="HF-001",
+            severity=Severity.ERROR,
+            message="No response sent",
+            path="/a",
+            method="GET",
+        )
+        v2 = Violation(
+            rule_id="HF-001",
+            severity=Severity.ERROR,
+            message="No response sent",
+            path="/b",
+            method="GET",
+        )
+        report = CheckReport(
+            app_path="myapp:app",
+            results=[
+                CheckResult("http", path="/a", method="GET", violations=[v]),
+                CheckResult("http", path="/b", method="GET", violations=[v2]),
+            ],
+        )
+        data = json.loads(format_json(report))
+        assert data["summary"]["total"] == 2
+        assert data["summary"]["unique"] == 1
+        assert len(data["violations"]) == 1
+        entry = data["violations"][0]
+        assert entry["count"] == 2
+        assert "GET /a" in entry["paths"]
+        assert "GET /b" in entry["paths"]
 
     def test_rules_text(self) -> None:
         text = format_rules_text(ALL_RULES, no_color=True)

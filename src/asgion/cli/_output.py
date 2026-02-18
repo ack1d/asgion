@@ -52,6 +52,8 @@ def format_text(
     w(f"Checking {report.app_path} ...")
 
     all_filtered: list[Violation] = []
+    first_seen: dict[tuple[str, str], str] = {}
+
     for result in report.results:
         result_violations = [
             v for v in result.violations if SEVERITY_LEVEL[v.severity] >= min_level
@@ -73,9 +75,14 @@ def format_text(
                 sev_color = _SEVERITY_COLORS.get(v.severity, "")
                 tag = _c(f"[{v.rule_id}]", _BOLD, color=color)
                 sev = _c(v.severity, sev_color, color=color)
-                w(f"  {tag} {sev}: {v.message}")
-                if v.hint:
-                    w(f"    hint: {v.hint}")
+                key = (v.rule_id, v.message)
+                if key in first_seen:
+                    w(f"  {tag} {sev}: (same as {first_seen[key]})")
+                else:
+                    first_seen[key] = label
+                    w(f"  {tag} {sev}: {v.message}")
+                    if v.hint:
+                        w(f"    hint: {v.hint}")
 
     w("")
     w(_summary_line(all_filtered, color=color))
@@ -101,7 +108,9 @@ def _summary_line(violations: list[Violation], *, color: bool) -> str:
         if by_sev[s]
     ]
     noun = "violation" if total == 1 else "violations"
-    return f"{total} {noun} ({', '.join(parts)})"
+    unique = len({(v.rule_id, v.message) for v in violations})
+    suffix = f" — {unique} unique" if unique < total else ""
+    return f"{total} {noun} ({', '.join(parts)}){suffix}"
 
 
 def format_json(
@@ -116,23 +125,34 @@ def format_json(
     for v in violations:
         by_sev[v.severity] += 1
 
+    groups: dict[tuple[str, str], list[Violation]] = {}
+    for v in violations:
+        key = (v.rule_id, v.message)
+        groups.setdefault(key, []).append(v)
+
+    deduped = []
+    for vs in groups.values():
+        first = vs[0]
+        paths = [f"{v.method} {v.path}".strip() if (v.method or v.path) else None for v in vs]
+        deduped.append(
+            {
+                "rule_id": first.rule_id,
+                "severity": str(first.severity),
+                "message": first.message,
+                "hint": first.hint,
+                "scope_type": first.scope_type,
+                "count": len(vs),
+                "paths": [p for p in paths if p],
+            }
+        )
+
     data = {
         "version": __version__,
         "app": report.app_path,
-        "violations": [
-            {
-                "rule_id": v.rule_id,
-                "severity": str(v.severity),
-                "message": v.message,
-                "hint": v.hint,
-                "scope_type": v.scope_type,
-                "path": v.path,
-                "method": v.method,
-            }
-            for v in violations
-        ],
+        "violations": deduped,
         "summary": {
             "total": len(violations),
+            "unique": len(deduped),
             "error": by_sev[Severity.ERROR],
             "warning": by_sev[Severity.WARNING],
             "info": by_sev[Severity.INFO],
