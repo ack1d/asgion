@@ -16,6 +16,8 @@ from asgion.rules.semantic import (
     SEM_009,
     SEM_010,
     SEM_011,
+    SEM_012,
+    SEM_013,
 )
 from asgion.validators.base import BaseValidator
 
@@ -70,6 +72,9 @@ class SemanticValidator(BaseValidator):
         scheme = ctx.scope.get("scheme", "")
         content_type_count = 0
         has_content_type = False
+        content_type_value = b""
+        has_wildcard_origin = False
+        allow_credentials = False
 
         for item in headers:
             if not isinstance(item, list | tuple) or len(item) != 2:
@@ -82,12 +87,28 @@ class SemanticValidator(BaseValidator):
             if name_lower == b"content-type":
                 content_type_count += 1
                 has_content_type = True
+                if isinstance(value, bytes):
+                    content_type_value = value
 
             if name_lower == b"content-length":
                 self._parse_content_length(ctx, value)
 
             if name_lower == b"set-cookie" and scheme == "http":
                 self._check_set_cookie_secure(ctx, value)
+
+            if (
+                name_lower == b"access-control-allow-origin"
+                and isinstance(value, bytes)
+                and value.strip() == b"*"
+            ):
+                has_wildcard_origin = True
+
+            if (
+                name_lower == b"access-control-allow-credentials"
+                and isinstance(value, bytes)
+                and value.strip().lower() == b"true"
+            ):
+                allow_credentials = True
 
         if content_type_count > 1:
             ctx.violation(SEM_001)
@@ -99,6 +120,12 @@ class SemanticValidator(BaseValidator):
             and status not in _NO_BODY_STATUSES
         ):
             ctx.violation(SEM_002)
+
+        if has_wildcard_origin and allow_credentials:
+            ctx.violation(SEM_012)
+
+        if has_content_type and content_type_value:
+            self._check_charset(ctx, content_type_value)
 
     def _parse_content_length(self, ctx: ConnectionContext, value: object) -> None:
         assert ctx.http is not None
@@ -205,3 +232,14 @@ class SemanticValidator(BaseValidator):
                 SEM_011,
                 f"Body sent in {chunks} chunks (threshold: {threshold})",
             )
+
+    def _check_charset(self, ctx: ConnectionContext, content_type: bytes) -> None:
+        ct = content_type.lower()
+        if not ct.startswith(b"text/"):
+            return
+        # SSE connections have their own framing; charset is not meaningful there.
+        if ct.startswith(b"text/event-stream"):
+            return
+        if b"charset" not in ct:
+            media_type = content_type.split(b";")[0].strip().decode(errors="replace")
+            ctx.violation(SEM_013, f"{media_type} response has no charset")

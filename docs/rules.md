@@ -6,7 +6,7 @@ All validation rules that Asgion checks, grouped by protocol layer.
 
 Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asgiref](https://github.com/django/asgiref)).
 
-**Total: 162 rules**
+**Total: 164 rules**
 
 | Severity | Meaning |
 |----------|---------|
@@ -230,7 +230,7 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 | `LF-009` | warning | App exited during startup without sending startup.complete or startup.failed | An exception during startup is not the same as startup.failed — send the proper signal |
 | `LF-010` | info | Lifespan state dict is available for sharing state with requests | state is mutable in lifespan scope and shallow-copied to request scopes |
 
-## Extensions (Layer 10)
+## HTTP Extensions (Layer 10)
 
 | ID | Severity | Summary | Hint |
 |----|----------|---------|------|
@@ -238,7 +238,7 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 | `EX-010` | error | http.response.early_hint sent after http.response.start | Early hints must be sent before the response starts |
 | `EX-011` | error | http.response.debug sent after http.response.start | Debug info should be sent before the response starts |
 
-## Semantic (Layer 11)
+## HTTP Semantic (Layer 11)
 
 | ID | Severity | Summary | Hint |
 |----|----------|---------|------|
@@ -253,3 +253,5 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 | `SEM-009` | info | Response body not streamed | Large body sent in a single chunk; consider streaming with more_body=True |
 | `SEM-010` | perf | Slow response body delivery | Time from response start to body complete exceeds 10s |
 | `SEM-011` | info | Excessive body chunk fragmentation | Response sent in more than 100 chunks; consider larger writes |
+| `SEM-012` | warning | CORS misconfiguration: wildcard origin with credentials | Access-Control-Allow-Origin: * and Access-Control-Allow-Credentials: true is rejected by browsers; restrict the origin to a specific value |
+| `SEM-013` | info | text/* response missing charset in Content-Type | Add charset=utf-8 to avoid encoding ambiguity, e.g. text/html; charset=utf-8 |

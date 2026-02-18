@@ -80,7 +80,7 @@ async def test_correct_http_app_no_violations():
             {
                 "type": "http.response.start",
                 "status": 200,
-                "headers": [(b"content-type", b"text/plain")],
+                "headers": [(b"content-type", b"text/plain; charset=utf-8")],
             }
         )
         await send({"type": "http.response.body", "body": b"OK", "more_body": False})

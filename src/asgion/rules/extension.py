@@ -1,7 +1,7 @@
 from asgion.core._types import Severity
 from asgion.core.rule import Rule
 
-_LAYER = "extension"
+_LAYER = "http.extension"
 _SCOPES = ("http",)
 
 EX_009 = Rule(

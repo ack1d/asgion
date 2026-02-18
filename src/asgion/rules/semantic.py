@@ -1,7 +1,7 @@
 from asgion.core._types import Severity
 from asgion.core.rule import Rule
 
-_LAYER = "semantic"
+_LAYER = "http.semantic"
 _SCOPES = ("http",)
 
 SEM_001 = Rule(
@@ -88,6 +88,23 @@ SEM_011 = Rule(
     Severity.INFO,
     "Excessive body chunk fragmentation",
     hint="Response sent in more than 100 chunks; consider larger writes",
+    layer=_LAYER,
+    scope_types=_SCOPES,
+)
+SEM_012 = Rule(
+    "SEM-012",
+    Severity.WARNING,
+    "CORS misconfiguration: wildcard origin with credentials",
+    hint="Access-Control-Allow-Origin: * and Access-Control-Allow-Credentials: true "
+    "is rejected by browsers; restrict the origin to a specific value",
+    layer=_LAYER,
+    scope_types=_SCOPES,
+)
+SEM_013 = Rule(
+    "SEM-013",
+    Severity.INFO,
+    "text/* response missing charset in Content-Type",
+    hint="Add charset=utf-8 to avoid encoding ambiguity, e.g. text/html; charset=utf-8",
     layer=_LAYER,
     scope_types=_SCOPES,
 )

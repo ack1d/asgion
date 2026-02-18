@@ -4,7 +4,7 @@ async def good_app(scope, receive, send):  # type: ignore[no-untyped-def]
         {
             "type": "http.response.start",
             "status": 200,
-            "headers": [(b"content-type", b"text/plain")],
+            "headers": [(b"content-type", b"text/plain; charset=utf-8")],
         }
     )
     await send({"type": "http.response.body", "body": b"OK", "more_body": False})
@@ -36,7 +36,7 @@ async def good_lifespan_app(scope, receive, send):  # type: ignore[no-untyped-de
         {
             "type": "http.response.start",
             "status": 200,
-            "headers": [(b"content-type", b"text/plain")],
+            "headers": [(b"content-type", b"text/plain; charset=utf-8")],
         }
     )
     await send({"type": "http.response.body", "body": b"OK", "more_body": False})

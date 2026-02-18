@@ -531,3 +531,115 @@ def test_threshold_override_via_config() -> None:
     ctx.http.total_body_bytes = 500
     validator.validate_complete(ctx)
     assert_violation(ctx, "SEM-008")
+
+
+# --- SEM-012: CORS misconfiguration ---
+
+
+def _send_response_start(
+    validator: SemanticValidator,
+    ctx: ConnectionContext,
+    headers: list,
+    status: int = 200,
+) -> None:
+    validator.validate_send(
+        ctx, {"type": "http.response.start", "status": status, "headers": headers}
+    )
+
+
+def test_sem012_wildcard_origin_with_credentials(validator: SemanticValidator) -> None:
+    ctx = make_http_ctx()
+    _send_response_start(
+        validator,
+        ctx,
+        [
+            (b"access-control-allow-origin", b"*"),
+            (b"access-control-allow-credentials", b"true"),
+            (b"content-type", b"application/json"),
+        ],
+    )
+    assert_violation(ctx, "SEM-012")
+
+
+def test_sem012_wildcard_origin_without_credentials_ok(validator: SemanticValidator) -> None:
+    ctx = make_http_ctx()
+    _send_response_start(
+        validator,
+        ctx,
+        [
+            (b"access-control-allow-origin", b"*"),
+            (b"content-type", b"application/json"),
+        ],
+    )
+    assert_no_violations(ctx)
+
+
+def test_sem012_specific_origin_with_credentials_ok(validator: SemanticValidator) -> None:
+    ctx = make_http_ctx()
+    _send_response_start(
+        validator,
+        ctx,
+        [
+            (b"access-control-allow-origin", b"https://example.com"),
+            (b"access-control-allow-credentials", b"true"),
+            (b"content-type", b"application/json"),
+        ],
+    )
+    assert_no_violations(ctx)
+
+
+def test_sem012_credentials_false_ok(validator: SemanticValidator) -> None:
+    ctx = make_http_ctx()
+    _send_response_start(
+        validator,
+        ctx,
+        [
+            (b"access-control-allow-origin", b"*"),
+            (b"access-control-allow-credentials", b"false"),
+            (b"content-type", b"application/json"),
+        ],
+    )
+    assert_no_violations(ctx)
+
+
+# --- SEM-013: text/* missing charset ---
+
+
+def test_sem013_text_html_no_charset(validator: SemanticValidator) -> None:
+    ctx = make_http_ctx()
+    _send_response_start(validator, ctx, [(b"content-type", b"text/html")])
+    assert_violation(ctx, "SEM-013")
+
+
+def test_sem013_text_plain_no_charset(validator: SemanticValidator) -> None:
+    ctx = make_http_ctx()
+    _send_response_start(validator, ctx, [(b"content-type", b"text/plain")])
+    assert_violation(ctx, "SEM-013")
+
+
+def test_sem013_text_html_with_charset_ok(validator: SemanticValidator) -> None:
+    ctx = make_http_ctx()
+    _send_response_start(validator, ctx, [(b"content-type", b"text/html; charset=utf-8")])
+    matching = [v for v in ctx.violations if v.rule_id == "SEM-013"]
+    assert matching == []
+
+
+def test_sem013_application_json_ok(validator: SemanticValidator) -> None:
+    ctx = make_http_ctx()
+    _send_response_start(validator, ctx, [(b"content-type", b"application/json")])
+    matching = [v for v in ctx.violations if v.rule_id == "SEM-013"]
+    assert matching == []
+
+
+def test_sem013_text_event_stream_ok(validator: SemanticValidator) -> None:
+    ctx = make_http_ctx()
+    _send_response_start(validator, ctx, [(b"content-type", b"text/event-stream")])
+    matching = [v for v in ctx.violations if v.rule_id == "SEM-013"]
+    assert matching == []
+
+
+def test_sem013_message_contains_media_type(validator: SemanticValidator) -> None:
+    ctx = make_http_ctx()
+    _send_response_start(validator, ctx, [(b"content-type", b"text/css")])
+    v = assert_violation(ctx, "SEM-013")
+    assert "text/css" in v.message

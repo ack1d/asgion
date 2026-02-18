@@ -4,6 +4,13 @@
 
 ### Breaking Changes
 
+- **Layer names renamed** - `categories` config values must be updated:
+  - `"extension"` -> `"http.extension"`
+  - `"semantic"` -> `"http.semantic"`
+
+  This aligns both layers with the existing `http.fsm` / `ws.fsm` convention and
+  enables `categories = ["http"]` to match all HTTP rules at once via prefix logic.
+
 - **Rule ID renumbering** - all gaps in rule ID sequences eliminated. Affected series:
   - `HE`: 005->004, 010..028->005..023 (23 rules, sequential)
   - `HF`: 003..015->002..012 (12 rules, sequential)
@@ -13,6 +20,11 @@
     now `HE-016..HE-023` after renumbering). `EX-009..EX-011` remain unchanged.
 
 ### Features
+
+- **SEM-012** - CORS misconfiguration: `Access-Control-Allow-Origin: *` combined with
+  `Access-Control-Allow-Credentials: true` is rejected by browsers (WARNING).
+- **SEM-013** - `text/*` response missing `charset` in `Content-Type` header (INFO).
+  Skipped for `text/event-stream` (SSE has its own framing).
 
 - **AsgionConfig** - configurable rule filtering via `pyproject.toml` or `.asgion.toml`:
   `min_severity`, `include_rules`, `exclude_rules`, `categories`, thresholds.

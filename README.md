@@ -42,7 +42,7 @@ asgion check myapp:app
 
 ## What It Catches
 
-**162 rules** across 12 layers — scope fields, event schemas, state machines,
+**164 rules** across 12 layers — scope fields, event schemas, state machines,
 extensions, and semantic checks for HTTP, WebSocket, and Lifespan.
 
 ```
@@ -148,7 +148,7 @@ Can also be loaded from `pyproject.toml` or `.asgion.toml`:
 profile = "recommended"       # base profile: strict / recommended / minimal
 exclude_rules = ["SEM-006"]   # suppress specific rules (supports globs: "SEM-*")
 include_rules = ["HF-*"]      # allowlist — only these rules fire
-categories = ["http.fsm"]     # filter by layer prefix
+categories = ["http"]         # filter by layer prefix ("http" matches http.fsm, http.semantic, …)
 ttfb_threshold = 2.0          # SEM-006: TTFB limit (seconds)
 lifecycle_threshold = 30.0    # SEM-007: total connection time (seconds)
 body_size_threshold = 10485760  # SEM-008: response size (bytes)
@@ -205,7 +205,7 @@ pytest --asgi-strict --asgi-min-severity warning
 | Scope validation | 71 rules | basic | none |
 | Event schema checks | 42 rules | none | manual |
 | State machine (FSM) | 35 rules | none | none |
-| Semantic checks | 11 rules | none | none |
+| Semantic checks | 13 rules | none | none |
 | Extension validation | 11 rules | none | none |
 | pytest plugin | yes | no | n/a |
 | Real-time callbacks | yes | no | n/a |

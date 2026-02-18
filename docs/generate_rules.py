@@ -19,8 +19,8 @@ LAYER_TITLES = {
     "ws.fsm": "WebSocket State Machine (Layer 8)",
     "lifespan.events": "Lifespan Events (Layer 6)",
     "lifespan.fsm": "Lifespan State Machine (Layer 9)",
-    "extension": "Extensions (Layer 10)",
-    "semantic": "Semantic (Layer 11)",
+    "http.extension": "HTTP Extensions (Layer 10)",
+    "http.semantic": "HTTP Semantic (Layer 11)",
 }
 
 LAYER_SPEC_REFS: dict[str, str] = {
@@ -47,8 +47,8 @@ LAYER_ORDER = [
     "ws.fsm",
     "lifespan.events",
     "lifespan.fsm",
-    "extension",
-    "semantic",
+    "http.extension",
+    "http.semantic",
 ]
 
 

@@ -17,7 +17,7 @@ async def _good_app(scope: dict, receive: object, send: object) -> None:  # type
         {
             "type": "http.response.start",
             "status": 200,
-            "headers": [(b"content-type", b"text/plain")],
+            "headers": [(b"content-type", b"text/plain; charset=utf-8")],
         }
     )
     await snd({"type": "http.response.body", "body": b"OK", "more_body": False})
@@ -233,7 +233,7 @@ async def _good_app(scope, receive, send):
     await send({
         "type": "http.response.start",
         "status": 200,
-        "headers": [(b"content-type", b"text/plain")],
+        "headers": [(b"content-type", b"text/plain; charset=utf-8")],
     })
     await send({"type": "http.response.body", "body": b"OK", "more_body": False})
 

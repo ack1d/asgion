@@ -36,7 +36,7 @@ class AsgionConfig:
         profile = "recommended"
         ttfb_threshold = 3.0
         exclude_rules = ["SEM-006"]
-        categories = ["http.fsm", "semantic"]
+        categories = ["http.fsm", "http.semantic"]
 
     """
 
@@ -59,19 +59,19 @@ class AsgionConfig:
     """
 
     categories: frozenset[str] = field(default_factory=frozenset)
-    """Layer prefixes to include (e.g. ``{"http", "general"}`` or
-    ``{"http.fsm", "semantic"}``).  Empty means all categories.
+    """Layer prefixes to include (e.g. ``{"http"}`` or ``{"http.fsm", "http.semantic"}``).
+    Empty means all categories.
 
     Matching uses prefix logic: ``"http"`` matches any rule whose
     ``layer`` equals ``"http"`` or starts with ``"http."``.
 
-    Known layer values (as of v0.3.0):
+    Known layer values:
     - ``"general"`` — G-xxx rules
     - ``"http.scope"`` — HS-xxx scope field rules
     - ``"http.events"`` — HE-xxx event field rules
     - ``"http.fsm"`` — HF-xxx state machine rules
-    - ``"extension"`` — EX-xxx extension rules (renamed to ``"http.extension"`` in H4)
-    - ``"semantic"`` — SEM-xxx semantic rules (renamed to ``"http.semantic"`` in H4)
+    - ``"http.extension"`` — EX-xxx extension rules
+    - ``"http.semantic"`` — SEM-xxx semantic rules
     - ``"ws.scope"``, ``"ws.events"``, ``"ws.fsm"``
     - ``"lifespan.scope"``, ``"lifespan.events"``, ``"lifespan.fsm"``
     """
