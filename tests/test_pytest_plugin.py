@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from asgion.pytest_plugin import InspectedApp, _format_violation, _make_inspected_app
+from asgion import Inspector
+from asgion.pytest_plugin import _format_violation
 
 pytest_plugins = ["pytester"]
 
@@ -53,7 +54,7 @@ def _make_http_scope() -> dict:
     }
 
 
-async def _drive(app: InspectedApp) -> None:
+async def _drive(app: Inspector) -> None:
     """Drive an inspected app through a minimal HTTP request."""
     scope = _make_http_scope()
     events = iter([{"type": "http.request", "body": b"", "more_body": False}])
@@ -67,11 +68,11 @@ async def _drive(app: InspectedApp) -> None:
     await app(scope, receive, send)  # type: ignore[arg-type]
 
 
-# --- _make_inspected_app ---
+# --- Inspector (via direct construction) ---
 
 
-async def test_inspected_app_collects_no_violations() -> None:
-    inspected = _make_inspected_app(_good_app)
+async def test_inspector_collects_no_violations() -> None:
+    inspector = Inspector(_good_app)
     scope = _make_http_scope()
 
     events = iter(
@@ -88,30 +89,30 @@ async def test_inspected_app_collects_no_violations() -> None:
     async def send(msg: dict) -> None:
         sent.append(msg)
 
-    await inspected(scope, receive, send)  # type: ignore[arg-type]
-    assert inspected.violations == []
+    await inspector(scope, receive, send)  # type: ignore[arg-type]
+    assert inspector.violations == []
     assert len(sent) == 2
 
 
-async def test_inspected_app_collects_violations() -> None:
-    inspected = _make_inspected_app(_bad_app)
-    await _drive(inspected)
-    assert len(inspected.violations) > 0
-    rule_ids = {v.rule_id for v in inspected.violations}
+async def test_inspector_collects_violations() -> None:
+    inspector = Inspector(_bad_app)
+    await _drive(inspector)
+    assert len(inspector.violations) > 0
+    rule_ids = {v.rule_id for v in inspector.violations}
     assert "HE-012" in rule_ids
 
 
-async def test_inspected_app_exclude_rules() -> None:
-    inspected = _make_inspected_app(_bad_app, exclude_rules={"HE-012"})
-    await _drive(inspected)
-    rule_ids = {v.rule_id for v in inspected.violations}
+async def test_inspector_exclude_rules() -> None:
+    inspector = Inspector(_bad_app, exclude_rules={"HE-012"})
+    await _drive(inspector)
+    rule_ids = {v.rule_id for v in inspector.violations}
     assert "HE-012" not in rule_ids
 
 
-def test_inspected_app_is_callable() -> None:
-    inspected = _make_inspected_app(_good_app)
-    assert isinstance(inspected, InspectedApp)
-    assert callable(inspected)
+def test_inspector_is_callable() -> None:
+    inspector = Inspector(_good_app)
+    assert isinstance(inspector, Inspector)
+    assert callable(inspector)
 
 
 # --- _format_violation ---

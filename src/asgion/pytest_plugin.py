@@ -24,13 +24,14 @@ CLI flag (applies asgi_validate to all tests using asgi_inspect)::
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 import pytest
 
+from asgion.core.inspector import Inspector
+
 if TYPE_CHECKING:
-    from asgion.core._types import ASGIApp, Receive, Scope, Send
+    from asgion.core._types import ASGIApp
     from asgion.core.config import AsgionConfig
 
 _SEVERITY_ORDER: dict[str, int] = {
@@ -40,40 +41,7 @@ _SEVERITY_ORDER: dict[str, int] = {
     "error": 3,
 }
 
-_APPS_KEY: pytest.StashKey[list[InspectedApp]] = pytest.StashKey()
-
-
-@dataclass
-class InspectedApp:
-    """Wrapper returned by the ``asgi_inspect`` fixture.
-
-    Collects violations during test execution.  Access ``violations``
-    after driving the app to inspect protocol correctness.
-    """
-
-    _app: ASGIApp
-    violations: list[Any] = field(default_factory=list)
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        await self._app(scope, receive, send)
-
-
-def _make_inspected_app(
-    app: ASGIApp,
-    *,
-    config: AsgionConfig | None = None,
-    exclude_rules: set[str] | None = None,
-) -> InspectedApp:
-    from asgion.core.wrapper import inspect
-
-    collected: list[Any] = []
-    wrapped = inspect(
-        app,
-        config=config,
-        on_violation=collected.append,
-        exclude_rules=exclude_rules,
-    )
-    return InspectedApp(_app=wrapped, violations=collected)
+_APPS_KEY: pytest.StashKey[list[Inspector]] = pytest.StashKey()
 
 
 def _format_violation(v: Any) -> str:
@@ -117,12 +85,13 @@ def asgi_inspect(request: pytest.FixtureRequest) -> Any:
     """Fixture that wraps ASGI apps with asgion validation.
 
     Returns a callable: ``asgi_inspect(app, exclude_rules=...)``
-    that returns an ``InspectedApp`` with a ``.violations`` list.
+    that returns an :class:`~asgion.core.inspector.Inspector` with a
+    ``.violations`` list.
 
     If the test is marked with ``@pytest.mark.asgi_validate`` or
     ``--asgi-strict`` is passed, violations are auto-checked at teardown.
     """
-    apps: list[InspectedApp] = []
+    apps: list[Inspector] = []
     # Stash before return — hook reads apps during "call" phase, not teardown
     request.node.stash[_APPS_KEY] = apps
 
@@ -131,10 +100,10 @@ def asgi_inspect(request: pytest.FixtureRequest) -> Any:
         *,
         config: AsgionConfig | None = None,
         exclude_rules: set[str] | None = None,
-    ) -> InspectedApp:
-        inspected = _make_inspected_app(app, config=config, exclude_rules=exclude_rules)
-        apps.append(inspected)
-        return inspected
+    ) -> Inspector:
+        inspector = Inspector(app, config=config, exclude_rules=exclude_rules)
+        apps.append(inspector)
+        return inspector
 
     return factory
 

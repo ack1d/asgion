@@ -13,8 +13,7 @@ from litestar.exceptions import HTTPException
 from litestar.response import Redirect, Stream
 from litestar.testing import AsyncTestClient
 
-from asgion import BUILTIN_PROFILES
-from asgion.pytest_plugin import InspectedApp
+from asgion import BUILTIN_PROFILES, Inspector
 
 _CONFIG = BUILTIN_PROFILES["recommended"]
 
@@ -105,12 +104,12 @@ def _make_app() -> Litestar:
 
 
 @pytest.fixture
-def app(asgi_inspect: Callable[..., InspectedApp]) -> InspectedApp:
+def app(asgi_inspect: Callable[..., Inspector]) -> Inspector:
     return asgi_inspect(_make_app(), config=_CONFIG)
 
 
 @pytest.fixture
-async def client(app: InspectedApp) -> AsyncIterator[AsyncTestClient[Any]]:
+async def client(app: Inspector) -> AsyncIterator[AsyncTestClient[Any]]:
     async with AsyncTestClient(app=app) as c:  # type: ignore[type-var]
         yield c
 
@@ -201,7 +200,7 @@ async def test_redirect(client: AsyncTestClient[Any]) -> None:
 
 
 @pytest.mark.asgi_validate(exclude_rules={"G-011", "LS-002", "SEM-003"}, min_severity="warning")
-async def test_bad_content_length_detected(client: AsyncTestClient[Any], app: InspectedApp) -> None:
+async def test_bad_content_length_detected(client: AsyncTestClient[Any], app: Inspector) -> None:
     r = await client.get("/bad-content-length")
     assert r.status_code == 200
     assert r.content == b"12345"
@@ -234,7 +233,7 @@ async def test_concurrent_requests(client: AsyncTestClient[Any]) -> None:
 
 
 async def test_lifespan_no_violations(
-    asgi_inspect: Callable[..., InspectedApp],
+    asgi_inspect: Callable[..., Inspector],
 ) -> None:
     started = False
     stopped = False

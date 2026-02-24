@@ -15,6 +15,7 @@ from asgion.core.config import (
     ConfigError,
     _parse_config,
     load_config,
+    load_user_profiles,
 )
 from asgion.core.rule import Rule
 
@@ -614,3 +615,119 @@ async def test_inspect_config_exclude_rules_merged() -> None:
 
     rule_ids = [v.rule_id for v in violations]
     assert "G-011" not in rule_ids
+
+
+# User-defined profiles
+
+
+def test_parse_config_user_defined_profile() -> None:
+    data = {
+        "profiles": {
+            "ci": {"min_severity": "error", "categories": ["http.fsm"]},
+        },
+        "profile": "ci",
+    }
+    cfg = _parse_config(data)
+    assert cfg.min_severity == Severity.ERROR
+    assert cfg.categories == frozenset({"http.fsm"})
+
+
+def test_parse_config_user_profile_overrides_builtin_name() -> None:
+    """User can shadow a builtin profile name."""
+    data = {
+        "profiles": {
+            "strict": {"min_severity": "error"},
+        },
+        "profile": "strict",
+    }
+    cfg = _parse_config(data)
+    # User's "strict" (error) shadows builtin "strict" (perf)
+    assert cfg.min_severity == Severity.ERROR
+
+
+def test_parse_config_unknown_profile_with_user_profiles_raises() -> None:
+    data = {
+        "profiles": {"ci": {"min_severity": "error"}},
+        "profile": "nope",
+    }
+    with pytest.raises(ConfigError, match="'nope'"):
+        _parse_config(data)
+
+
+def test_parse_config_user_profile_with_explicit_override() -> None:
+    data = {
+        "profiles": {"ci": {"min_severity": "error"}},
+        "profile": "ci",
+        "min_severity": "warning",
+    }
+    cfg = _parse_config(data)
+    # Explicit min_severity overrides profile base
+    assert cfg.min_severity == Severity.WARNING
+
+
+def test_parse_config_profiles_key_ignored_in_profile_definition() -> None:
+    """Nested profiles inside a profile definition are silently ignored."""
+    data = {
+        "profiles": {
+            "outer": {
+                "min_severity": "error",
+                "profiles": {"inner": {"min_severity": "perf"}},
+            },
+        },
+        "profile": "outer",
+    }
+    cfg = _parse_config(data)
+    assert cfg.min_severity == Severity.ERROR
+
+
+def test_parse_config_non_dict_profiles_ignored() -> None:
+    data = {"profiles": "not a dict"}
+    cfg = _parse_config(data)
+    assert cfg == AsgionConfig()
+
+
+def test_load_user_profiles_from_toml(tmp_path: Path) -> None:
+    toml = tmp_path / ".asgion.toml"
+    toml.write_bytes(
+        b'[profiles.ci]\nmin_severity = "error"\ncategories = ["http.fsm"]\n'
+        b'\n[profiles.dev]\nmin_severity = "perf"\n'
+    )
+    profiles = load_user_profiles(toml)
+    assert "ci" in profiles
+    assert profiles["ci"].min_severity == Severity.ERROR
+    assert profiles["ci"].categories == frozenset({"http.fsm"})
+    assert "dev" in profiles
+    assert profiles["dev"].min_severity == Severity.PERF
+
+
+def test_load_user_profiles_from_pyproject(tmp_path: Path) -> None:
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_bytes(
+        b'[tool.asgion.profiles.ci]\nmin_severity = "error"\n'
+        b'\n[tool.asgion.profiles.dev]\nmin_severity = "warning"\n'
+    )
+    profiles = load_user_profiles(pyproject)
+    assert "ci" in profiles
+    assert profiles["ci"].min_severity == Severity.ERROR
+    assert "dev" in profiles
+    assert profiles["dev"].min_severity == Severity.WARNING
+
+
+def test_load_user_profiles_no_profiles_returns_empty(tmp_path: Path) -> None:
+    toml = tmp_path / ".asgion.toml"
+    toml.write_bytes(b'profile = "strict"\n')
+    profiles = load_user_profiles(toml)
+    assert profiles == {}
+
+
+def test_load_user_profiles_nonexistent_returns_empty(tmp_path: Path) -> None:
+    profiles = load_user_profiles(tmp_path / "nonexistent.toml")
+    assert profiles == {}
+
+
+def test_load_config_with_user_profile(tmp_path: Path) -> None:
+    toml = tmp_path / ".asgion.toml"
+    # profile = "ci" must appear before [profiles.ci] in TOML
+    toml.write_bytes(b'profile = "ci"\n\n[profiles.ci]\nmin_severity = "error"\n')
+    cfg = load_config(toml)
+    assert cfg.min_severity == Severity.ERROR

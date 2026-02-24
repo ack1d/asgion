@@ -17,7 +17,13 @@ from asgion.cli._output import (
 )
 from asgion.cli._runner import run_check
 from asgion.core._types import Severity
-from asgion.core.config import BUILTIN_PROFILES, AsgionConfig, ConfigError, load_config
+from asgion.core.config import (
+    BUILTIN_PROFILES,
+    AsgionConfig,
+    ConfigError,
+    load_config,
+    load_user_profiles,
+)
 from asgion.rules import ALL_RULES
 
 
@@ -62,9 +68,9 @@ def cli() -> None:
 )
 @click.option(
     "--profile",
-    type=click.Choice(list(BUILTIN_PROFILES)),
     default=None,
-    help="Rule filter profile (overrides config file profile).",
+    help="Rule filter profile (overrides config file profile). "
+    f"Built-in: {', '.join(BUILTIN_PROFILES)}. User-defined profiles are read from config.",
 )
 def check(
     app_path: str,
@@ -92,7 +98,13 @@ def check(
         sys.exit(2)
 
     if profile is not None:
-        base = BUILTIN_PROFILES[profile]
+        user_profiles = load_user_profiles(config_path)
+        all_profiles = BUILTIN_PROFILES | user_profiles
+        base = all_profiles.get(profile)
+        if base is None:
+            known = ", ".join(f'"{p}"' for p in all_profiles)
+            click.echo(f"Error: unknown profile {profile!r}. Known profiles: {known}", err=True)
+            sys.exit(2)
         # CLI --profile overrides filter settings; preserve thresholds and
         # merge exclude_rules (config file exclusions are additive).
         config = dataclasses.replace(

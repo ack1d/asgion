@@ -3,6 +3,7 @@ from importlib.metadata import version
 from asgion.core._types import Severity
 from asgion.core.config import BUILTIN_PROFILES, AsgionConfig, ConfigError
 from asgion.core.context import ConnectionContext
+from asgion.core.inspector import Inspector
 from asgion.core.rule import Rule
 from asgion.core.violation import ASGIProtocolError, Violation
 from asgion.core.wrapper import inspect
@@ -18,6 +19,7 @@ __all__ = [
     "BaseValidator",
     "ConfigError",
     "ConnectionContext",
+    "Inspector",
     "Rule",
     "Severity",
     "ValidatorRegistry",

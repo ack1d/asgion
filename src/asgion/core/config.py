@@ -171,6 +171,26 @@ BUILTIN_PROFILES: dict[str, AsgionConfig] = {
 }
 
 
+def load_user_profiles(path: Path | str | None = None) -> dict[str, AsgionConfig]:
+    """Load user-defined profiles from a config file.
+
+    Reads ``[tool.asgion.profiles.*]`` sections from ``pyproject.toml`` or
+    ``.asgion.toml``.  Uses the same file-discovery logic as :func:`load_config`.
+
+    Returns:
+        Mapping of profile name → :class:`AsgionConfig`.  Empty dict if no
+        user profiles are defined.
+
+    """
+    if path is not None:
+        resolved = Path(path)
+        data = _read_file(resolved) if resolved.exists() else {}
+    else:
+        data = _find_config()
+
+    return _parse_user_profiles(data)
+
+
 def load_config(path: Path | str | None = None) -> AsgionConfig:
     """Load :class:`AsgionConfig` from a TOML file.
 
@@ -238,20 +258,48 @@ def _read_file(path: Path) -> dict[str, Any]:
     return raw
 
 
-def _parse_config(data: dict[str, Any]) -> AsgionConfig:
+def _parse_user_profiles(data: dict[str, Any]) -> dict[str, AsgionConfig]:
+    """Parse ``profiles`` subsection into named :class:`AsgionConfig` instances.
+
+    Reads ``data["profiles"]`` (from ``[tool.asgion.profiles.*]`` in TOML) and
+    returns a mapping of profile name → config.  Profile definitions cannot
+    themselves reference other user-defined profiles.
+    """
+    raw = data.get("profiles", {})
+    if not isinstance(raw, dict):
+        return {}
+    result: dict[str, AsgionConfig] = {}
+    for name, pd in raw.items():
+        if isinstance(pd, dict):
+            # Parse without nested profiles to prevent infinite recursion.
+            result[str(name)] = _parse_config(pd, _extra_profiles={})
+    return result
+
+
+def _parse_config(
+    data: dict[str, Any],
+    *,
+    _extra_profiles: dict[str, AsgionConfig] | None = None,
+) -> AsgionConfig:
     """Parse raw key/value dict into :class:`AsgionConfig`.
 
-    If ``profile`` is present, the corresponding :data:`BUILTIN_PROFILES`
-    entry is used as the base; explicit keys in *data* override it.
+    If ``profile`` is present, it is looked up in built-in profiles first, then
+    in *_extra_profiles* (user-defined).  Explicit keys in *data* override the
+    profile base.
 
     Raises:
         :class:`ConfigError`: On unrecognised enum values or unknown profiles.
 
     """
+    if _extra_profiles is None:
+        _extra_profiles = _parse_user_profiles(data)
+
+    all_profiles = BUILTIN_PROFILES | _extra_profiles
+
     if (profile_name := data.get("profile")) is not None:
-        base = BUILTIN_PROFILES.get(str(profile_name))
+        base = all_profiles.get(str(profile_name))
         if base is None:
-            known = ", ".join(f'"{p}"' for p in BUILTIN_PROFILES)
+            known = ", ".join(f'"{p}"' for p in all_profiles)
             raise ConfigError(f"Unknown profile {profile_name!r}. Known profiles: {known}")
     else:
         base = AsgionConfig()

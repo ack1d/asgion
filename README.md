@@ -27,6 +27,16 @@ from asgion import inspect
 app = inspect(app)  # wrap any ASGI app — zero config
 ```
 
+Use `Inspector` when you need to access violations after driving the app:
+
+```python
+from asgion import Inspector
+
+inspector = Inspector(app)
+# ... drive the app (httpx, TestClient, etc.) ...
+assert inspector.violations == []
+```
+
 Use with any ASGI server:
 
 ```python
@@ -76,7 +86,7 @@ Check an ASGI app for protocol violations.
 | `--exclude-rules IDS` | Comma-separated rule IDs to skip |
 | `--min-severity LEVEL` | Minimum severity: `perf`, `info`, `warning`, `error` |
 | `--config FILE` | Path to `.asgion.toml` or `pyproject.toml` |
-| `--profile PROFILE` | Rule filter profile: `strict`, `recommended`, `minimal` |
+| `--profile PROFILE` | Rule filter profile: `strict`, `recommended`, `minimal`, or a user-defined profile from config |
 | `--no-color` | Disable ANSI colors (also respects `NO_COLOR` env) |
 | `--no-lifespan` | Skip lifespan startup/shutdown checks |
 
@@ -153,13 +163,18 @@ Can also be loaded from `pyproject.toml` or `.asgion.toml`:
 
 ```toml
 [tool.asgion]
-profile = "recommended"       # base profile: strict / recommended / minimal
+profile = "recommended"       # base profile: strict / recommended / minimal / user-defined
 exclude_rules = ["SEM-006"]   # suppress specific rules (supports globs: "SEM-*")
 include_rules = ["HF-*"]      # allowlist — only these rules fire
 categories = ["http"]         # filter by layer prefix ("http" matches http.fsm, http.semantic, …)
 ttfb_threshold = 2.0          # SEM-006: TTFB limit (seconds)
 lifecycle_threshold = 30.0    # SEM-007: total connection time (seconds)
 body_size_threshold = 10485760  # SEM-008: response size (bytes)
+
+# User-defined profiles
+[tool.asgion.profiles.ci]
+min_severity = "error"
+categories = ["http.fsm", "ws.fsm"]
 ```
 
 ### Violation

@@ -2,6 +2,58 @@
 
 ## Unreleased
 
+### Internal
+
+- `ConnectionContext`, `HTTPProtocolState`, `WebSocketProtocolState`,
+  `LifespanProtocolState` converted to `@dataclass(slots=True)` — eliminates
+  `__dict__` per-instance overhead and speeds up attribute access.
+- `ConnectionContext.events` removed — the field was populated per-message but
+  never read by any validator (dead code). For long-lived WebSocket connections
+  this caused unbounded memory growth. `TraceRecorder` in v0.5.0 will provide
+  proper event history via an efficient tuple-based format.
+- `Inspector`: removed two per-message dict allocations (`ctx.events.append`)
+  from the hot path.
+
+### Breaking Changes
+
+- `InspectedApp` (pytest plugin internal class) replaced by `Inspector`. Update
+  type annotations: `asgi_inspect: Callable[..., InspectedApp]` →
+  `asgi_inspect: Callable[..., Inspector]`. Import from `asgion` instead of
+  `asgion.pytest_plugin`.
+
+### Features
+
+- **`Inspector` class** — stateful ASGI wrapper that accumulates violations
+  across connections. Unlike `inspect()` (which returns a plain callable),
+  `Inspector` keeps `violations` accessible after driving the app:
+  ```python
+  inspector = Inspector(app)
+  # ... drive the app ...
+  assert inspector.violations == []
+  ```
+  `Inspector` is also callable as an ASGI app directly (`await inspector(scope, receive, send)`).
+
+- **User-defined profiles** — define custom profiles in `pyproject.toml` or
+  `.asgion.toml`:
+  ```toml
+  [tool.asgion.profiles.ci]
+  min_severity = "error"
+  categories = ["http.fsm", "ws.fsm"]
+  ```
+  Use via `profile = "ci"` in config or `asgion check --profile ci` in CLI.
+
+- **`load_user_profiles(path=None)`** — new public function that returns
+  user-defined profiles from the config file.
+
+- **`asgion check --profile`** now accepts user-defined profile names in addition
+  to built-in ones (`strict`, `recommended`, `minimal`).
+
+- `pytest` fixture `asgi_inspect` now returns `Inspector` instead of `InspectedApp`.
+  `Inspector` exposes `.violations` and is callable as an ASGI app — fully
+  backward-compatible for existing test code.
+
+- `inspect()` is now a thin wrapper around `Inspector`. Behavior is unchanged.
+
 ## 0.3.0 (2026-02-19)
 
 ### Breaking Changes

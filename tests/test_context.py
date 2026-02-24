@@ -184,9 +184,3 @@ class TestElapsed:
         time.sleep(0.01)
         t2 = ctx.elapsed
         assert t2 > t1
-
-
-class TestEvents:
-    def test_events_initially_empty(self) -> None:
-        ctx = make_http_ctx()
-        assert ctx.events == []

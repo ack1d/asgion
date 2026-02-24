@@ -443,3 +443,56 @@ class TestCLI:
         )
         assert result.exit_code == 0
         assert "Lifespan" in result.output
+
+    def test_check_builtin_profile(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "tests._cli_fixtures:good_lifespan_app",
+                "--profile",
+                "strict",
+                "--no-lifespan",
+                "--no-color",
+            ],
+        )
+        assert result.exit_code == 0
+
+    def test_check_unknown_profile_exits_2(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "tests._cli_fixtures:good_lifespan_app",
+                "--profile",
+                "nonexistent_profile_xyz",
+                "--no-lifespan",
+            ],
+        )
+        assert result.exit_code == 2
+        assert "unknown profile" in result.output.lower()
+
+    def test_check_user_defined_profile(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
+        config = tmp_path / ".asgion.toml"
+        config.write_bytes(b'[profiles.ci]\nmin_severity = "error"\n')
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "tests._cli_fixtures:bad_app",
+                "--profile",
+                "ci",
+                "--config",
+                str(config),
+                "--no-lifespan",
+                "--format",
+                "json",
+            ],
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        for v in data["violations"]:
+            assert v["severity"] == "error"

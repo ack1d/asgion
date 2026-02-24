@@ -16,7 +16,7 @@ type ViolationCallback = Callable[[Violation], Any]
 type RuleFilter = Callable[[Rule], bool]
 
 
-@dataclass
+@dataclass(slots=True)
 class HTTPProtocolState:
     """Mutable state for a single HTTP connection."""
 
@@ -35,7 +35,7 @@ class HTTPProtocolState:
     response_started_at: float | None = None
 
 
-@dataclass
+@dataclass(slots=True)
 class WebSocketProtocolState:
     """Mutable state for a single WebSocket connection."""
 
@@ -53,7 +53,7 @@ class WebSocketProtocolState:
         return self.phase == WSPhase.CLOSED
 
 
-@dataclass
+@dataclass(slots=True)
 class LifespanProtocolState:
     """Mutable state for a single Lifespan connection."""
 
@@ -64,7 +64,7 @@ class LifespanProtocolState:
     shutdown_failed: bool = False
 
 
-@dataclass
+@dataclass(slots=True)
 class ConnectionContext:
     """Tracks state for a single ASGI connection (scope invocation).
 
@@ -85,8 +85,6 @@ class ConnectionContext:
     lifespan: LifespanProtocolState | None = None
 
     start_time: float = field(default_factory=time.monotonic)
-
-    events: list[dict[str, Any]] = field(default_factory=list)
 
     _rule_allowed: RuleFilter | None = None
     _on_violation: ViolationCallback | None = None

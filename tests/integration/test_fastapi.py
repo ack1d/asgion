@@ -12,8 +12,7 @@ pytest.importorskip("fastapi")
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse, StreamingResponse
 
-from asgion import BUILTIN_PROFILES
-from asgion.pytest_plugin import InspectedApp
+from asgion import BUILTIN_PROFILES, Inspector
 
 from .conftest import drive_lifespan
 
@@ -84,12 +83,12 @@ def _make_app() -> FastAPI:
 
 
 @pytest.fixture
-def app(asgi_inspect: Callable[..., InspectedApp]) -> InspectedApp:
+def app(asgi_inspect: Callable[..., Inspector]) -> Inspector:
     return asgi_inspect(_make_app(), config=_CONFIG)
 
 
 @pytest.fixture
-async def client(app: InspectedApp) -> AsyncIterator[httpx.AsyncClient]:
+async def client(app: Inspector) -> AsyncIterator[httpx.AsyncClient]:
     transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)  # type: ignore[arg-type]
     async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as c:
         yield c
@@ -184,7 +183,7 @@ async def test_redirect(client: httpx.AsyncClient) -> None:
 
 
 @pytest.mark.asgi_validate(exclude_rules={"SEM-003"}, min_severity="warning")
-async def test_bad_content_length_detected(client: httpx.AsyncClient, app: InspectedApp) -> None:
+async def test_bad_content_length_detected(client: httpx.AsyncClient, app: Inspector) -> None:
     r = await client.get("/bad-content-length")
     assert r.status_code == 200
     assert r.content == b"12345"
@@ -217,7 +216,7 @@ async def test_concurrent_requests(client: httpx.AsyncClient) -> None:
 
 
 async def test_lifespan_no_violations(
-    asgi_inspect: Callable[..., InspectedApp],
+    asgi_inspect: Callable[..., Inspector],
 ) -> None:
     started = False
     stopped = False

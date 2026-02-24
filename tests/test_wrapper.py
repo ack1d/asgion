@@ -165,60 +165,6 @@ async def test_exclude_rules_suppresses():
     assert not any(v.rule_id == "HE-007" for v in violations)
 
 
-async def test_events_are_recorded():
-    from asgion.core.context import ConnectionContext
-    from asgion.validators.base import create_default_registry
-
-    async def app(scope, receive, send):
-        await receive()
-        await send({"type": "http.response.start", "status": 200, "headers": []})
-        await send({"type": "http.response.body", "body": b"OK", "more_body": False})
-
-    from asgion.validators.base import BaseValidator
-
-    captured_ctx: list[ConnectionContext] = []
-
-    class ContextCapture(BaseValidator):
-        def validate_complete(self, ctx: ConnectionContext) -> None:
-            captured_ctx.append(ctx)
-
-    registry = create_default_registry()
-    registry.register(ContextCapture())
-
-    scope = _make_scope("http")
-    request_sent = False
-
-    async def receive():
-        nonlocal request_sent
-        if not request_sent:
-            request_sent = True
-            return {"type": "http.request", "body": b"", "more_body": False}
-        await asyncio.sleep(999)
-        return {"type": "http.disconnect"}
-
-    async def send(msg):
-        pass
-
-    wrapped = inspect(app, registry=registry)
-    try:
-        await asyncio.wait_for(wrapped(scope, receive, send), timeout=2.0)
-    except TimeoutError:
-        pass
-
-    assert len(captured_ctx) == 1
-    ctx = captured_ctx[0]
-    assert len(ctx.events) == 3
-    assert ctx.events[0]["phase"] == "receive"
-    assert ctx.events[0]["type"] == "http.request"
-    assert ctx.events[1]["phase"] == "send"
-    assert ctx.events[1]["type"] == "http.response.start"
-    assert ctx.events[2]["phase"] == "send"
-    assert ctx.events[2]["type"] == "http.response.body"
-    for event in ctx.events:
-        assert "t" in event
-        assert event["t"] >= 0
-
-
 async def test_websocket_through_wrapper():
     async def app(scope, receive, send):
         await receive()
