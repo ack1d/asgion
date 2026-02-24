@@ -89,26 +89,14 @@ class SemanticValidator(BaseValidator):
                 has_content_type = True
                 if isinstance(value, bytes):
                     content_type_value = value
-
-            if name_lower == b"content-length":
+            elif name_lower == b"content-length":
                 self._parse_content_length(ctx, value)
-
-            if name_lower == b"set-cookie" and scheme == "http":
+            elif name_lower == b"set-cookie" and scheme == "http":
                 self._check_set_cookie_secure(ctx, value)
-
-            if (
-                name_lower == b"access-control-allow-origin"
-                and isinstance(value, bytes)
-                and value.strip() == b"*"
-            ):
-                has_wildcard_origin = True
-
-            if (
-                name_lower == b"access-control-allow-credentials"
-                and isinstance(value, bytes)
-                and value.strip().lower() == b"true"
-            ):
-                allow_credentials = True
+            elif name_lower == b"access-control-allow-origin":
+                has_wildcard_origin = isinstance(value, bytes) and value.strip() == b"*"
+            elif name_lower == b"access-control-allow-credentials":
+                allow_credentials = isinstance(value, bytes) and value.strip().lower() == b"true"
 
         if content_type_count > 1:
             ctx.violation(SEM_001)
