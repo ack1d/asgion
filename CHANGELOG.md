@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- ...
+
+## 0.4.0 (2026-02-24)
+
 ### Internal
 
 - `ConnectionContext`, `HTTPProtocolState`, `WebSocketProtocolState`,
@@ -13,6 +17,9 @@
   proper event history via an efficient tuple-based format.
 - `Inspector`: removed two per-message dict allocations (`ctx.events.append`)
   from the hot path.
+- `SemanticValidator._check_response_headers`: header name checks converted
+  from independent `if` branches to `elif` chain — semantically correct
+  (a header has exactly one name) and reduces Cognitive Complexity.
 
 ### Breaking Changes
 
