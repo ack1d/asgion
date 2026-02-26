@@ -113,6 +113,9 @@ async def _run_ws(
         if phase == "connect":
             phase = "connected"
             return {"type": "websocket.connect"}
+        if phase == "message":
+            phase = "disconnect"
+            return {"type": "websocket.receive", "text": ""}
         if phase == "disconnect":
             phase = "done"
             return {"type": "websocket.disconnect", "code": 1000}
@@ -123,7 +126,7 @@ async def _run_ws(
         nonlocal phase
         msg_type = message.get("type", "")
         if msg_type == "websocket.accept" and phase == "connected":
-            phase = "disconnect"
+            phase = "message"
         elif msg_type == "websocket.close":
             phase = "done"
 

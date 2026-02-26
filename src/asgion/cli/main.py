@@ -14,8 +14,11 @@ from asgion.cli._output import (
     format_rules_json,
     format_rules_text,
     format_text,
+    format_trace_json,
+    format_trace_text,
 )
 from asgion.cli._runner import run_check
+from asgion.cli._trace import run_trace
 from asgion.core._types import Severity
 from asgion.core.config import (
     BUILTIN_PROFILES,
@@ -30,47 +33,63 @@ from asgion.rules import ALL_RULES
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
 @click.version_option(__version__, "-V", "--version", message="asgion %(version)s")
 def cli() -> None:
-    """asgion - ASGI protocol inspector."""
+    """asgion - ASGI protocol inspector.
+
+    Validates scope fields, event schemas, state machines, and semantic
+    constraints for HTTP, WebSocket, and Lifespan protocols.
+
+    APP_PATH is a Python import path in the form module:attribute,
+    e.g. myapp:app or myapp.main:application.
+    """
 
 
 @cli.command()
-@click.argument("app_path")
+@click.argument("app_path", metavar="APP_PATH")
 @click.option(
     "--path",
     "paths",
     multiple=True,
     default=("/",),
-    help="Paths to check. Default is HTTP. Prefix with protocol to specify type: http:/path, https:/path, ws:/path, wss:/path.",
+    help=("Paths to check (repeatable).  [default: /]  Prefix: http:/path, ws:/path, wss:/path."),
 )
-@click.option("--strict", is_flag=True, help="Exit 1 on any violations.")
+@click.option("--strict", is_flag=True, help="Exit 1 on any violation found.")
 @click.option(
     "--format",
     "fmt",
     type=click.Choice(["text", "json"]),
     default="text",
+    show_default=True,
     help="Output format.",
 )
-@click.option("--exclude-rules", default="", help="Comma-separated rule IDs to exclude.")
+@click.option(
+    "--exclude-rules",
+    default="",
+    help="Comma-separated rule IDs to suppress (e.g. SEM-006,SEM-009).",
+)
 @click.option(
     "--min-severity",
     type=click.Choice(["perf", "info", "warning", "error"]),
     default="perf",
+    show_default=True,
     help="Minimum severity to report.",
 )
 @click.option("--no-color", is_flag=True, envvar="NO_COLOR", help="Disable ANSI colors.")
-@click.option("--no-lifespan", is_flag=True, help="Skip lifespan checks.")
+@click.option("--no-lifespan", is_flag=True, help="Skip lifespan startup/shutdown checks.")
 @click.option(
     "--config",
     "config_path",
     default=None,
     type=click.Path(exists=False),
-    help="Path to .asgion.toml or pyproject.toml config file.",
+    help="Path to .asgion.toml or pyproject.toml. Auto-detected if omitted.",
 )
 @click.option(
     "--profile",
     default=None,
-    help="Rule filter profile (overrides config file profile). "
-    f"Built-in: {', '.join(BUILTIN_PROFILES)}. User-defined profiles are read from config.",
+    help=(
+        "Profile name (overrides config file). "
+        f"Built-in: {', '.join(BUILTIN_PROFILES)}. "
+        "User-defined profiles are loaded from config."
+    ),
 )
 def check(
     app_path: str,
@@ -84,7 +103,17 @@ def check(
     config_path: str | None,
     profile: str | None,
 ) -> None:
-    """Check an ASGI app for protocol violations."""
+    """Check an ASGI app for protocol violations.
+
+    APP_PATH is a Python import path (module:attribute).
+
+    \b
+    Examples:
+      asgion check myapp:app
+      asgion check myapp:app --path /api/users --path ws:/ws/chat
+      asgion check myapp:app --strict --min-severity warning
+      asgion check myapp:app --profile recommended --format json
+    """
     try:
         app = load_app(app_path)
     except LoadError as exc:
@@ -143,6 +172,7 @@ def check(
     "fmt",
     type=click.Choice(["text", "json"]),
     default="text",
+    show_default=True,
     help="Output format.",
 )
 @click.option("--no-color", is_flag=True, envvar="NO_COLOR", help="Disable ANSI colors.")
@@ -150,17 +180,26 @@ def check(
     "--layer",
     default=None,
     type=click.Choice(["general", "http", "ws", "lifespan"]),
-    help="Filter by layer.",
+    help="Show only rules from this layer.",
 )
 @click.option(
     "--severity",
     "sev",
     default=None,
     type=click.Choice(["perf", "info", "warning", "error"]),
-    help="Filter by severity.",
+    help="Show only rules with this severity.",
 )
 def rules(fmt: str, no_color: bool, layer: str | None, sev: str | None) -> None:
-    """List all validation rules."""
+    """List all validation rules.
+
+    Without filters, prints every rule grouped by layer.
+
+    \b
+    Examples:
+      asgion rules
+      asgion rules --layer http --severity error
+      asgion rules --format json
+    """
     filtered = list(ALL_RULES)
     if layer is not None:
         filtered = [r for r in filtered if r.layer == layer or r.layer.startswith(layer + ".")]
@@ -174,3 +213,80 @@ def rules(fmt: str, no_color: bool, layer: str | None, sev: str | None) -> None:
         click.echo(format_rules_json(filtered))
     else:
         click.echo(format_rules_text(filtered, no_color=no_color, total=total))
+
+
+@cli.command()
+@click.argument("app_path", metavar="APP_PATH")
+@click.option(
+    "--path",
+    "paths",
+    multiple=True,
+    default=("/",),
+    help=("Paths to trace (repeatable).  [default: /]  Prefix: ws:/path, wss:/path for WebSocket."),
+)
+@click.option(
+    "--format",
+    "fmt",
+    type=click.Choice(["text", "json"]),
+    default="text",
+    show_default=True,
+    help="Output format (ignored when --out is used).",
+)
+@click.option("--no-color", is_flag=True, envvar="NO_COLOR", help="Disable ANSI colors.")
+@click.option(
+    "--out",
+    "trace_dir",
+    default=None,
+    type=click.Path(),
+    help="Directory for trace JSON files. Prints to stdout if omitted.",
+)
+@click.option(
+    "--max-body-size",
+    default=65536,
+    show_default=True,
+    type=int,
+    help="Max response body to record per event (bytes).",
+)
+@click.option("--no-lifespan", is_flag=True, help="Skip lifespan startup/shutdown tracing.")
+def trace(
+    app_path: str,
+    paths: tuple[str, ...],
+    fmt: str,
+    no_color: bool,
+    trace_dir: str | None,
+    max_body_size: int,
+    no_lifespan: bool,
+) -> None:
+    """Record every receive()/send() as structured traces.
+
+    APP_PATH is a Python import path (module:attribute).
+
+    Each trace captures the full ASGI lifecycle of a connection:
+    scope, events with nanosecond timestamps, and a summary.
+
+    \b
+    Examples:
+      asgion trace myapp:app
+      asgion trace myapp:app --format json
+      asgion trace myapp:app --path /api/users --out ./traces/
+      asgion trace myapp:app --path ws:/ws/chat
+    """
+    try:
+        app = load_app(app_path)
+    except LoadError as exc:
+        click.echo(f"Error: {exc}", err=True)
+        sys.exit(2)
+
+    records = run_trace(
+        app,
+        paths=paths,
+        trace_dir=trace_dir,
+        max_body_size=max_body_size,
+        run_lifespan=not no_lifespan,
+    )
+
+    if trace_dir is None:
+        if fmt == "json":
+            click.echo(format_trace_json(records))
+        else:
+            click.echo(format_trace_text(records, no_color=no_color))

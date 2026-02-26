@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import os
 from typing import TYPE_CHECKING
@@ -11,6 +13,7 @@ if TYPE_CHECKING:
     from asgion.cli._runner import CheckReport, CheckResult
     from asgion.core.rule import Rule
     from asgion.core.violation import Violation
+    from asgion.trace import TraceEvent, TraceRecord, TraceViolation
 
 _SEVERITY_COLORS: dict[Severity, str] = {
     Severity.ERROR: "\033[31m",  # red
@@ -19,9 +22,15 @@ _SEVERITY_COLORS: dict[Severity, str] = {
     Severity.PERF: "\033[2m",  # dim
 }
 _GREEN = "\033[32m"
+_BLUE = "\033[34m"
 _BOLD = "\033[1m"
 _DIM = "\033[2m"
 _RESET = "\033[0m"
+
+_PHASE_COLORS: dict[str, str] = {
+    "receive": _BLUE,
+    "send": _GREEN,
+}
 
 
 def _use_color(no_color_flag: bool) -> bool:
@@ -53,6 +62,7 @@ def format_text(
 
     all_filtered: list[Violation] = []
     first_seen: dict[tuple[str, str], str] = {}
+    error_count = 0
 
     for result in report.results:
         result_violations = [
@@ -67,6 +77,7 @@ def format_text(
         w(_c(header + fill, _BOLD, color=color))
 
         if result.error:
+            error_count += 1
             w(f"  {_c('ERROR', '\033[31m', color=color)}: {result.error}")
         elif not result_violations:
             w(f"  {_c('OK', _GREEN, color=color)}")
@@ -85,7 +96,7 @@ def format_text(
                         w(f"    hint: {v.hint}")
 
     w("")
-    w(_summary_line(all_filtered, color=color))
+    w(_summary_line(all_filtered, error_count=error_count, color=color))
     return "\n".join(lines)
 
 
@@ -97,22 +108,28 @@ def _result_label(result: CheckResult) -> str:
     return f"{result.method} {result.path}"
 
 
-def _summary_line(violations: list[Violation], *, color: bool) -> str:
+def _summary_line(violations: list[Violation], *, error_count: int = 0, color: bool) -> str:
     total = len(violations)
-    if total == 0:
+    if total == 0 and error_count == 0:
         return _c("No violations found.", _GREEN, color=color)
-    by_sev: dict[Severity, int] = dict.fromkeys(Severity, 0)
-    for v in violations:
-        by_sev[v.severity] += 1
-    parts = [
-        _c(f"{by_sev[s]} {s}", _SEVERITY_COLORS.get(s, ""), color=color)
-        for s in (Severity.ERROR, Severity.WARNING, Severity.INFO, Severity.PERF)
-        if by_sev[s]
-    ]
-    noun = "violation" if total == 1 else "violations"
-    unique = len({(v.rule_id, v.message) for v in violations})
-    suffix = f" — {unique} unique" if unique < total else ""
-    return f"{total} {noun} ({', '.join(parts)}){suffix}"
+    parts: list[str] = []
+    if error_count > 0:
+        noun = "error" if error_count == 1 else "errors"
+        parts.append(_c(f"{error_count} {noun}", "\033[31m", color=color))
+    if total > 0:
+        by_sev: dict[Severity, int] = dict.fromkeys(Severity, 0)
+        for v in violations:
+            by_sev[v.severity] += 1
+        parts.extend(
+            _c(f"{by_sev[s]} {s}", _SEVERITY_COLORS.get(s, ""), color=color)
+            for s in (Severity.ERROR, Severity.WARNING, Severity.INFO, Severity.PERF)
+            if by_sev[s]
+        )
+        noun = "violation" if total == 1 else "violations"
+        unique = len({(v.rule_id, v.message) for v in violations})
+        suffix = f" — {unique} unique" if unique < total else ""
+        return f"{total} {noun} ({', '.join(parts)}){suffix}"
+    return ", ".join(parts)
 
 
 def format_json(
@@ -239,3 +256,223 @@ def format_rules_json(rules: list[Rule]) -> str:
         "total": len(rules),
     }
     return json.dumps(data, indent=2)
+
+
+# Trace output
+
+_RED = "\033[31m"
+
+
+def _resolve_severity(rule_id: str) -> Severity | None:
+    from asgion.rules import RULES
+
+    rule = RULES.get(rule_id)
+    return rule.severity if rule is not None else None
+
+
+def _violation_breakdown(violations: tuple[TraceViolation, ...], *, color: bool) -> str:
+    by_sev: dict[Severity, int] = {}
+    for v in violations:
+        sev = _resolve_severity(v.rule_id)
+        if sev is not None:
+            by_sev[sev] = by_sev.get(sev, 0) + 1
+    if not by_sev:
+        return ""
+    return ", ".join(
+        _c(f"{by_sev[s]} {s}", _SEVERITY_COLORS.get(s, ""), color=color)
+        for s in (Severity.ERROR, Severity.WARNING, Severity.INFO, Severity.PERF)
+        if by_sev.get(s)
+    )
+
+
+def _ns_to_ms(ns: int) -> str:
+    return f"{ns / 1_000_000:.3f}ms"
+
+
+def _b64_byte_count(b64: str) -> int:
+    try:
+        return len(base64.b64decode(b64))
+    except (ValueError, binascii.Error):
+        return 0
+
+
+def _event_highlights(event: TraceEvent) -> str:
+    etype = event.type
+    data = event.data
+
+    if etype == "http.response.start":
+        parts: list[str] = []
+        status = data.get("status")
+        if status is not None:
+            parts.append(str(status))
+        headers = data.get("headers", [])
+        for name, value in headers:
+            if name == "content-type":
+                parts.append(value)
+                break
+        return " ".join(parts) if parts else ""
+    if etype in ("http.response.body", "http.request"):
+        body = data.get("body", "")
+        if body:
+            n = _b64_byte_count(body)
+            return f"{n} bytes"
+    elif etype == "websocket.accept":
+        sub = data.get("subprotocol")
+        if sub:
+            return f"subprotocol={sub}"
+    elif etype in ("websocket.send", "websocket.receive"):
+        text = data.get("text")
+        if text is not None:
+            preview = text[:40] + ("..." if len(text) > 40 else "")
+            return f'"{preview}"'
+        b = data.get("bytes", "")
+        if b:
+            n = _b64_byte_count(b)
+            return f"{n} bytes"
+    return ""
+
+
+def _format_event_line(
+    event: TraceEvent,
+    *,
+    prev_ns: int | None,
+    color: bool,
+    violation_ids: list[str] | None = None,
+) -> str:
+    t = _ns_to_ms(event.t_ns).rjust(10)
+    phase_color = _PHASE_COLORS.get(event.phase, _DIM)
+    phase = _c(event.phase.ljust(7), phase_color, color=color)
+    etype = event.type
+    if violation_ids:
+        etype = _c(etype, _RED, color=color)
+    highlights = _event_highlights(event)
+    suffix = f"  {highlights}" if highlights else ""
+    delta = ""
+    if prev_ns is not None:
+        delta_ns = event.t_ns - prev_ns
+        delta = "  " + _c(f"(+{_ns_to_ms(delta_ns)})", _DIM, color=color)
+    marker = ""
+    if violation_ids:
+        labels = []
+        for vid in violation_ids:
+            sev = _resolve_severity(vid)
+            labels.append(f"{vid} ({sev})" if sev is not None else vid)
+        marker = "  " + _c(f"\u2190 {', '.join(labels)}", _RED, color=color)
+    return f"  {t}  {phase}  {etype}{suffix}{delta}{marker}"
+
+
+def _trace_header(record: TraceRecord, *, color: bool) -> str:
+    scope = record.scope
+    summary = record.summary
+    duration = _ns_to_ms(summary.total_ns)
+
+    if scope.type == "lifespan":
+        label = "lifespan"
+    elif scope.type == "websocket":
+        label = f"WS {scope.path}" if scope.path else "WS"
+    else:
+        method = scope.method or "?"
+        path = scope.path or "/"
+        label = f"{method} {path}"
+
+    timing = duration
+    if summary.ttfb_ns is not None:
+        timing += f", TTFB {_ns_to_ms(summary.ttfb_ns)}"
+
+    tag = _c("TRACE", _BOLD, color=color)
+    return f"{tag}  {label} ({timing})"
+
+
+def _build_violation_indexes(
+    violations: tuple[TraceViolation, ...],
+) -> tuple[list[str], dict[int, list[str]], list[str]]:
+    scope_ids: list[str] = []
+    by_event: dict[int, list[str]] = {}
+    complete_ids: list[str] = []
+    for v in violations:
+        if v.phase == "scope":
+            scope_ids.append(v.rule_id)
+        elif v.phase == "complete":
+            complete_ids.append(v.rule_id)
+        elif v.event_index is not None:
+            by_event.setdefault(v.event_index, []).append(v.rule_id)
+    return scope_ids, by_event, complete_ids
+
+
+def format_trace_text(
+    records: list[TraceRecord],
+    *,
+    no_color: bool = False,
+) -> str:
+    """Format trace records as human-readable text."""
+    color = _use_color(no_color)
+    parts: list[str] = []
+
+    for i, record in enumerate(records):
+        if i > 0:
+            parts.append(_c("─" * _LINE_WIDTH, _DIM, color=color))
+            parts.append("")
+
+        parts.append(_trace_header(record, color=color))
+        parts.append("")
+
+        scope_ids, by_event, complete_ids = _build_violation_indexes(record.summary.violations)
+
+        if scope_ids:
+            label = _c(", ".join(scope_ids), _RED, color=color)
+            parts.append(f"  scope: {label}")
+            parts.append("")
+
+        prev_ns: int | None = None
+        for idx, event in enumerate(record.events):
+            v_ids = by_event.get(idx)
+            parts.append(
+                _format_event_line(event, prev_ns=prev_ns, color=color, violation_ids=v_ids)
+            )
+            prev_ns = event.t_ns
+
+        if complete_ids:
+            parts.append("")
+            label = _c(", ".join(complete_ids), _RED, color=color)
+            parts.append(f"  complete: {label}")
+
+        parts.append("")
+
+        v_count = len(record.summary.violations)
+        e_count = record.summary.event_count
+        footer = f"  Events: {e_count}  |  Violations: "
+        if v_count > 0:
+            footer += _c(str(v_count), _RED, color=color)
+            breakdown = _violation_breakdown(record.summary.violations, color=color)
+            if breakdown:
+                footer += f" ({breakdown})"
+        else:
+            footer += _c("0", _GREEN, color=color)
+        parts.append(footer)
+
+    if len(records) > 1:
+        total_ns = sum(r.summary.total_ns for r in records)
+        total_events = sum(r.summary.event_count for r in records)
+        all_violations = tuple(v for r in records for v in r.summary.violations)
+        segments = [
+            f"{len(records)} traces",
+            f"{total_events} events",
+        ]
+        if all_violations:
+            label = f"{len(all_violations)} violations"
+            breakdown = _violation_breakdown(all_violations, color=color)
+            if breakdown:
+                label += f" ({breakdown})"
+            segments.append(_c(label, _RED, color=color))
+        segments.append(_ns_to_ms(total_ns))
+        parts.append("")
+        parts.append(_c("─", _DIM, color=color) + " " + " | ".join(segments))
+
+    return "\n".join(parts)
+
+
+def format_trace_json(records: list[TraceRecord]) -> str:
+    """Format trace records as JSON (one object per record, newline-separated)."""
+    from asgion.trace._format import serialize
+
+    return "\n".join(serialize(r) for r in records)
