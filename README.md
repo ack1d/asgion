@@ -7,32 +7,104 @@
 [![License](https://img.shields.io/pypi/l/asgion)](https://github.com/ack1d/asgion/blob/main/LICENSE)
 
 ASGI protocol inspector and trace engine.
-Validates HTTP, WebSocket & Lifespan state machines, event schemas, and scope fields.
+Catch subtle protocol violations your tests miss — before they hit production.
+
+## Why asgion?
+
+ASGI apps can pass all tests while still violating the protocol:
+
+- Sending response body before `http.response.start`
+- Writing to a closed WebSocket connection
+- Exiting without completing a streaming response
+- Returning malformed event payloads
+
+Frameworks catch some of this. asgion validates the full ASGI contract — state machines, event schemas, scope fields, and semantic constraints across HTTP, WebSocket, and Lifespan.
 
 ## Highlights
 
-- **Comprehensive validation** — scope fields, event schemas, state machines, semantic checks
-- **HTTP, WebSocket, Lifespan** — all three ASGI protocols covered
+- **Full ASGI contract validation** — 164 rules across HTTP, WebSocket, and Lifespan
 - **Trace engine** — record every `receive()`/`send()` with nanosecond timestamps and inline violation markers
+- **CI-ready** — deterministic exit codes and JSON output
 - **CLI, Python API, pytest plugin** — fits any workflow
 - **Zero runtime dependencies** — pure Python 3.12+
 - **O(1) per message** — safe for hot paths, no overhead when tracing is off
 
+Works with any ASGI app: FastAPI, Starlette, Litestar, Django (ASGI), or bare ASGI handlers.
+
 ## Quickstart
+
+Get started in under a minute:
 
 ```bash
 pip install asgion[cli]
+```
+
+Given a buggy app that sends body before `http.response.start`:
+
+```python
+# myapp.py
+async def app(scope, receive, send):
+    if scope["type"] == "http":
+        await send({"type": "http.response.body", "body": b"oops"})       # wrong order
+        await send({"type": "http.response.start", "status": 200, "headers": []})
+        await send({"type": "http.response.body", "body": b"hello"})
+```
+
+**Check** finds protocol violations:
+
+```bash
 asgion check myapp:app
 ```
 
 ```
-── GET / ─────────────────────────────────────────────────────
-  [HF-003] error: Duplicate http.response.start
-    hint: Only one response.start is allowed per HTTP connection
-  [HE-012] error: response.body 'body' must be bytes, got str
+CHECK  myapp:app
 
-2 violations (2 error)
+── GET / ─────────────────────────────────────────────────────────
+  [HF-002] error: http.response.body sent without preceding http.response.start
+    hint: Send http.response.start before any http.response.body
+  [SEM-002] info: No Content-Type header on 2xx response
+    hint: Responses with a body should include a Content-Type header
+
+2 violations (1 error, 1 info)
 ```
+
+What is `HF-002`? **Look up** any rule directly:
+
+```bash
+asgion rules HF-002
+```
+
+```
+RULE  [HF-002] error
+  http.response.body sent without preceding http.response.start
+    hint: Send http.response.start before any http.response.body
+
+  layer: http.fsm
+  applies to: http
+```
+
+**Trace** shows the full event timeline for the same app:
+
+```bash
+asgion trace myapp:app
+```
+
+```
+TRACE  GET / (0.063ms, TTFB 0.035ms)
+
+     0.016ms  send     http.response.body  4 bytes  ← HF-002 (error)
+     0.035ms  send     http.response.start  200  (+0.019ms)  ← SEM-002 (info)
+     0.052ms  send     http.response.body  5 bytes  (+0.016ms)
+
+  Events: 3  |  Violations: 2 (1 error, 1 info)
+```
+
+```bash
+asgion trace myapp:app --min-severity error   # only error-level markers
+asgion trace myapp:app --out ./traces/        # save as JSON files
+```
+
+Exit codes: 0 = clean, 1 = violations (`--strict`), 2 = runtime error. See `asgion check --help`.
 
 See the [full rule list](docs/rules.md) for all available rules and their descriptions.
 
@@ -43,20 +115,10 @@ from asgion import Inspector
 
 inspector = Inspector(app)
 # ... drive the app via httpx, TestClient, etc. ...
-assert inspector.violations == []
+assert inspector.violations == []  # fails if any protocol violation occurred
 ```
 
-As middleware:
-
-```python
-from asgion import inspect
-
-uvicorn.run(inspect(app))
-```
-
-## Tracing
-
-Record the full ASGI lifecycle for debugging and analysis:
+With tracing:
 
 ```python
 inspector = Inspector(app, trace=True)
@@ -69,25 +131,17 @@ record.scope.path        # "/api/users"
 record.summary.ttfb_ns   # time to first byte (ns)
 ```
 
-```bash
-asgion trace myapp:app --out ./traces/   # save as JSON files
-```
+As middleware:
 
-```
-asgion trace myapp:app
-```
+```python
+from asgion import inspect
 
-```
-TRACE  GET / (0.070ms, TTFB 0.042ms)
-
-     0.020ms  send     http.response.body  4 bytes  ← HF-002 (error)
-     0.042ms  send     http.response.start  200  (+0.022ms)  ← SEM-002 (info)
-     0.059ms  send     http.response.body  5 bytes  (+0.016ms)
-
-  Events: 3  |  Violations: 2 (1 error, 1 info)
+uvicorn.run(inspect(app))
 ```
 
 ## Pytest Plugin
+
+Integrate protocol validation directly into your test suite:
 
 ```bash
 pip install asgion[pytest]
