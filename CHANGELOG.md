@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- ...
+
+## 0.5.1 (2026-02-26)
+
 ### Features
 
 - `asgion rules HF-002` — single rule lookup by ID with summary, hint, and layer.
@@ -19,7 +23,7 @@
 - `NO_COLOR=""` now correctly disables colors per no-color.org spec.
 - `--path` help text in `check` and `trace` unified: `ws:/path for WebSocket`.
 
-## 0.5.0
+## 0.5.0 (2026-02-26)
 
 ### Features
 
