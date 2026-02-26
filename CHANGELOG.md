@@ -4,6 +4,61 @@
 
 - ...
 
+## 0.5.0
+
+### Features
+
+- **Trace engine** - record every `receive()`/`send()` as structured traces
+  with nanosecond timestamps. Enable with `Inspector(app, trace=True)`:
+
+  ```python
+  inspector = Inspector(app, trace=True)
+  # ... drive the app ...
+  record = inspector.traces[0]
+  record.scope.method      # "GET"
+  record.scope.path        # "/api/users"
+  record.summary.ttfb_ns   # time to first byte (ns)
+  ```
+
+- **`TraceStorage` protocol** - pluggable storage backends. Built-in:
+  `MemoryStorage` (default) and `FileStorage` (one JSON file per trace).
+
+- **Deterministic sampling** - `sample_rate` parameter on Inspector.
+  Hash-based, same endpoint always produces the same decision for a given rate.
+
+- **`asgion trace` CLI command** - record traces from the command line.
+  Human-readable text output with color-coded phases (`receive` in blue,
+  `send` in green), inline violation markers with severity
+  (`← HF-002 (error)`), per-record severity breakdown
+  (`Violations: 2 (1 error, 1 info)`).
+  `--format json` for machine-readable output, `--out` for file storage.
+
+- **CLI help** - usage examples and default values in all `--help` output.
+
+- Export `load_config` and `load_user_profiles` in public API.
+
+### Fixes
+
+- CLI `check`/`trace`: WS runner now sends a `websocket.receive` message
+  before disconnect, making the synthetic session realistic and avoiding
+  app crashes on frameworks that expect data after accept (e.g. Starlette).
+
+- CLI `check`: summary line now reports application errors instead of
+  showing "No violations found" when a scope raised an exception.
+
+### Docs
+
+- **README** - concise landing-page style with highlights section,
+  trace CLI output example.
+- **`docs/configuration.md`** - configuration guide with minimal example,
+  full TOML reference, profiles, rule filtering, and Python API.
+
+### Internal
+
+- `Inspector` uses two independent wrapper closures: fast path (`trace=False`)
+  and traced path (`trace=True`). No runtime branching - selected once at init.
+- O(1) per-message tracing hot path; heavy processing deferred to `finalize()`.
+
 ## 0.4.0 (2026-02-24)
 
 ### Internal
