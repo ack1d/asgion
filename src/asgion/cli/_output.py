@@ -56,9 +56,7 @@ def format_text(
     lines: list[str] = []
     w = lines.append
 
-    w(f"asgion {__version__}")
-    w("")
-    w(f"Checking {report.app_path} ...")
+    w(f"{_c('CHECK', _BOLD, color=color)}  {report.app_path}")
 
     all_filtered: list[Violation] = []
     first_seen: dict[tuple[str, str], str] = {}
@@ -96,7 +94,14 @@ def format_text(
                         w(f"    hint: {v.hint}")
 
     w("")
-    w(_summary_line(all_filtered, error_count=error_count, color=color))
+    w(
+        _summary_line(
+            all_filtered,
+            error_count=error_count,
+            path_count=len(report.results),
+            color=color,
+        )
+    )
     return "\n".join(lines)
 
 
@@ -108,7 +113,12 @@ def _result_label(result: CheckResult) -> str:
     return f"{result.method} {result.path}"
 
 
-def _summary_line(violations: list[Violation], *, error_count: int = 0, color: bool) -> str:
+def _violations_summary(
+    violations: list[Violation],
+    *,
+    error_count: int = 0,
+    color: bool,
+) -> str:
     total = len(violations)
     if total == 0 and error_count == 0:
         return _c("No violations found.", _GREEN, color=color)
@@ -130,6 +140,19 @@ def _summary_line(violations: list[Violation], *, error_count: int = 0, color: b
         suffix = f" — {unique} unique" if unique < total else ""
         return f"{total} {noun} ({', '.join(parts)}){suffix}"
     return ", ".join(parts)
+
+
+def _summary_line(
+    violations: list[Violation],
+    *,
+    error_count: int = 0,
+    path_count: int = 1,
+    color: bool,
+) -> str:
+    v_part = _violations_summary(violations, error_count=error_count, color=color)
+    if path_count > 1:
+        return f"Scopes: {path_count}  |  {v_part}"
+    return v_part
 
 
 def format_json(
@@ -183,10 +206,15 @@ def format_json(
 
 _LAYER_TITLES: dict[str, str] = {
     "general": "General",
+    "http.scope": "HTTP Scope",
     "http.events": "HTTP Events",
     "http.fsm": "HTTP FSM",
+    "http.semantic": "HTTP Semantic",
+    "http.extension": "HTTP Extensions",
+    "ws.scope": "WebSocket Scope",
     "ws.events": "WebSocket Events",
     "ws.fsm": "WebSocket FSM",
+    "lifespan.scope": "Lifespan Scope",
     "lifespan.events": "Lifespan Events",
     "lifespan.fsm": "Lifespan FSM",
 }
@@ -214,10 +242,9 @@ def format_rules_text(
         groups.setdefault(r.layer, []).append(r)
 
     count = len(rules)
-    header = f"asgion {__version__} - {count} rules"
-    if total is not None and total != count:
-        header += f" (filtered from {total})"
-    w(header)
+    tag = _c("RULES", _BOLD, color=color)
+    counter = f"{count} / {total}" if total is not None and total != count else str(count)
+    w(f"{tag}  {counter}")
 
     for layer in _LAYER_ORDER:
         group = groups.get(layer)
@@ -235,6 +262,27 @@ def format_rules_text(
             rule_id = _c(r.id.ljust(id_w), _BOLD, color=color)
             severity = _c(str(r.severity).ljust(sev_w), sev_color, color=color)
             w(f"  {rule_id}  {severity}  {r.summary}")
+
+    return "\n".join(lines)
+
+
+def format_rule_detail(rule: Rule, *, no_color: bool = False) -> str:
+    color = _use_color(no_color)
+    sev_color = _SEVERITY_COLORS.get(rule.severity, "")
+    lines: list[str] = []
+    w = lines.append
+
+    tag = _c("RULE", _BOLD, color=color)
+    rule_id = _c(f"[{rule.id}]", _BOLD, color=color)
+    severity = _c(str(rule.severity), sev_color, color=color)
+    w(f"{tag}  {rule_id} {severity}")
+    w(f"  {rule.summary}")
+    if rule.hint:
+        w(f"    hint: {rule.hint}")
+    w("")
+    w(f"  layer: {rule.layer}")
+    if rule.scope_types:
+        w(f"  applies to: {', '.join(rule.scope_types)}")
 
     return "\n".join(lines)
 
@@ -332,6 +380,19 @@ def _event_highlights(event: TraceEvent) -> str:
     return ""
 
 
+def _max_violation_severity(violation_ids: list[str]) -> Severity | None:
+    max_level = -1
+    max_sev: Severity | None = None
+    for vid in violation_ids:
+        sev = _resolve_severity(vid)
+        if sev is not None:
+            level = SEVERITY_LEVEL[sev]
+            if level > max_level:
+                max_level = level
+                max_sev = sev
+    return max_sev
+
+
 def _format_event_line(
     event: TraceEvent,
     *,
@@ -344,7 +405,9 @@ def _format_event_line(
     phase = _c(event.phase.ljust(7), phase_color, color=color)
     etype = event.type
     if violation_ids:
-        etype = _c(etype, _RED, color=color)
+        max_sev = _max_violation_severity(violation_ids)
+        etype_color = _SEVERITY_COLORS.get(max_sev, _RED) if max_sev else _RED
+        etype = _c(etype, etype_color, color=color)
     highlights = _event_highlights(event)
     suffix = f"  {highlights}" if highlights else ""
     delta = ""
@@ -353,11 +416,13 @@ def _format_event_line(
         delta = "  " + _c(f"(+{_ns_to_ms(delta_ns)})", _DIM, color=color)
     marker = ""
     if violation_ids:
-        labels = []
+        parts = []
         for vid in violation_ids:
             sev = _resolve_severity(vid)
-            labels.append(f"{vid} ({sev})" if sev is not None else vid)
-        marker = "  " + _c(f"\u2190 {', '.join(labels)}", _RED, color=color)
+            sev_color = _SEVERITY_COLORS.get(sev, _RED) if sev else _RED
+            label = f"{vid} ({sev})" if sev is not None else vid
+            parts.append(_c(label, sev_color, color=color))
+        marker = "  " + _c("\u2190 ", _DIM, color=color) + ", ".join(parts)
     return f"  {t}  {phase}  {etype}{suffix}{delta}{marker}"
 
 
@@ -399,10 +464,26 @@ def _build_violation_indexes(
     return scope_ids, by_event, complete_ids
 
 
+def _filter_trace_violations(
+    violations: tuple[TraceViolation, ...],
+    min_severity: Severity,
+) -> tuple[TraceViolation, ...]:
+    if min_severity == Severity.PERF:
+        return violations
+    min_level = SEVERITY_LEVEL[min_severity]
+    return tuple(
+        v
+        for v in violations
+        if (sev := _resolve_severity(v.rule_id)) is not None and SEVERITY_LEVEL[sev] >= min_level
+    )
+
+
 def format_trace_text(
     records: list[TraceRecord],
     *,
+    app_path: str = "",
     no_color: bool = False,
+    min_severity: Severity = Severity.PERF,
 ) -> str:
     """Format trace records as human-readable text."""
     color = _use_color(no_color)
@@ -416,7 +497,11 @@ def format_trace_text(
         parts.append(_trace_header(record, color=color))
         parts.append("")
 
-        scope_ids, by_event, complete_ids = _build_violation_indexes(record.summary.violations)
+        filtered_violations = _filter_trace_violations(
+            record.summary.violations,
+            min_severity,
+        )
+        scope_ids, by_event, complete_ids = _build_violation_indexes(filtered_violations)
 
         if scope_ids:
             label = _c(", ".join(scope_ids), _RED, color=color)
@@ -438,12 +523,12 @@ def format_trace_text(
 
         parts.append("")
 
-        v_count = len(record.summary.violations)
+        v_count = len(filtered_violations)
         e_count = record.summary.event_count
         footer = f"  Events: {e_count}  |  Violations: "
         if v_count > 0:
             footer += _c(str(v_count), _RED, color=color)
-            breakdown = _violation_breakdown(record.summary.violations, color=color)
+            breakdown = _violation_breakdown(filtered_violations, color=color)
             if breakdown:
                 footer += f" ({breakdown})"
         else:
@@ -453,7 +538,10 @@ def format_trace_text(
     if len(records) > 1:
         total_ns = sum(r.summary.total_ns for r in records)
         total_events = sum(r.summary.event_count for r in records)
-        all_violations = tuple(v for r in records for v in r.summary.violations)
+        all_violations = _filter_trace_violations(
+            tuple(v for r in records for v in r.summary.violations),
+            min_severity,
+        )
         segments = [
             f"{len(records)} traces",
             f"{total_events} events",
@@ -466,7 +554,8 @@ def format_trace_text(
             segments.append(_c(label, _RED, color=color))
         segments.append(_ns_to_ms(total_ns))
         parts.append("")
-        parts.append(_c("─", _DIM, color=color) + " " + " | ".join(segments))
+        prefix = f"{app_path} | " if app_path else ""
+        parts.append(_c("─", _DIM, color=color) + " " + prefix + " | ".join(segments))
 
     return "\n".join(parts)
 

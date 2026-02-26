@@ -11,6 +11,7 @@ from asgion import __version__
 from asgion.cli._loader import LoadError, load_app
 from asgion.cli._output import (
     format_json,
+    format_rule_detail,
     format_rules_json,
     format_rules_text,
     format_text,
@@ -27,7 +28,7 @@ from asgion.core.config import (
     load_config,
     load_user_profiles,
 )
-from asgion.rules import ALL_RULES
+from asgion.rules import ALL_RULES, RULES
 
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
@@ -113,6 +114,12 @@ def check(
       asgion check myapp:app --path /api/users --path ws:/ws/chat
       asgion check myapp:app --strict --min-severity warning
       asgion check myapp:app --profile recommended --format json
+
+    \b
+    Exit codes:
+      0  no violations (or violations below --min-severity)
+      1  violations found (with --strict)
+      2  runtime error (bad module path, unknown profile, etc.)
     """
     try:
         app = load_app(app_path)
@@ -167,6 +174,7 @@ def check(
 
 
 @cli.command()
+@click.argument("rule_id", required=False, default=None)
 @click.option(
     "--format",
     "fmt",
@@ -189,17 +197,36 @@ def check(
     type=click.Choice(["perf", "info", "warning", "error"]),
     help="Show only rules with this severity.",
 )
-def rules(fmt: str, no_color: bool, layer: str | None, sev: str | None) -> None:
-    """List all validation rules.
+def rules(
+    rule_id: str | None,
+    fmt: str,
+    no_color: bool,
+    layer: str | None,
+    sev: str | None,
+) -> None:
+    """List all validation rules, or show details for a single rule.
 
-    Without filters, prints every rule grouped by layer.
+    Without arguments, prints every rule grouped by layer.
+    With RULE_ID, shows details for that specific rule.
 
     \b
     Examples:
       asgion rules
+      asgion rules HF-002
       asgion rules --layer http --severity error
       asgion rules --format json
     """
+    if rule_id is not None:
+        rule = RULES.get(rule_id)
+        if rule is None:
+            click.echo(f"Unknown rule: {rule_id}", err=True)
+            sys.exit(2)
+        if fmt == "json":
+            click.echo(format_rules_json([rule]))
+        else:
+            click.echo(format_rule_detail(rule, no_color=no_color))
+        return
+
     filtered = list(ALL_RULES)
     if layer is not None:
         filtered = [r for r in filtered if r.layer == layer or r.layer.startswith(layer + ".")]
@@ -248,6 +275,13 @@ def rules(fmt: str, no_color: bool, layer: str | None, sev: str | None) -> None:
     help="Max response body to record per event (bytes).",
 )
 @click.option("--no-lifespan", is_flag=True, help="Skip lifespan startup/shutdown tracing.")
+@click.option(
+    "--min-severity",
+    default="perf",
+    type=click.Choice(["perf", "info", "warning", "error"]),
+    show_default=True,
+    help="Minimum severity for violation markers.",
+)
 def trace(
     app_path: str,
     paths: tuple[str, ...],
@@ -256,6 +290,7 @@ def trace(
     trace_dir: str | None,
     max_body_size: int,
     no_lifespan: bool,
+    min_severity: str,
 ) -> None:
     """Record every receive()/send() as structured traces.
 
@@ -285,8 +320,17 @@ def trace(
         run_lifespan=not no_lifespan,
     )
 
+    severity = Severity(min_severity)
+
     if trace_dir is None:
         if fmt == "json":
             click.echo(format_trace_json(records))
         else:
-            click.echo(format_trace_text(records, no_color=no_color))
+            click.echo(
+                format_trace_text(
+                    records,
+                    app_path=app_path,
+                    no_color=no_color,
+                    min_severity=severity,
+                )
+            )

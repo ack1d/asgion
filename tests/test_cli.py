@@ -207,7 +207,7 @@ class TestOutput:
 
     def test_rules_text(self) -> None:
         text = format_rules_text(ALL_RULES, no_color=True)
-        assert f"{len(ALL_RULES)} rules" in text
+        assert str(len(ALL_RULES)) in text
         assert "G-001" in text
 
     def test_rules_json(self) -> None:
@@ -228,7 +228,7 @@ class TestCLI:
         runner = CliRunner()
         result = runner.invoke(cli, ["rules", "--no-color"])
         assert result.exit_code == 0
-        assert f"{len(ALL_RULES)} rules" in result.output
+        assert str(len(ALL_RULES)) in result.output
 
     def test_rules_json(self) -> None:
         runner = CliRunner()
@@ -333,17 +333,17 @@ class TestCLI:
         runner = CliRunner()
         result = runner.invoke(cli, ["rules", "--no-color", "--layer", "http"])
         assert result.exit_code == 0
-        assert f"filtered from {len(ALL_RULES)}" in result.output
+        assert f"/ {len(ALL_RULES)}" in result.output
         for line in result.output.splitlines():
             if line.startswith("  ") and line[2:].strip() and line[2:].strip()[0].isalpha():
                 rule_id = line.split()[0]
-                assert rule_id.startswith(("HE-", "HF-", "HS-", "EX-")), rule_id
+                assert rule_id.startswith(("HE-", "HF-", "HS-", "EX-", "SEM-")), rule_id
 
     def test_rules_severity_filter(self) -> None:
         runner = CliRunner()
         result = runner.invoke(cli, ["rules", "--no-color", "--severity", "warning"])
         assert result.exit_code == 0
-        assert f"filtered from {len(ALL_RULES)}" in result.output
+        assert f"/ {len(ALL_RULES)}" in result.output
         assert "warning" in result.output
         assert "  error  " not in result.output
 
@@ -361,7 +361,7 @@ class TestCLI:
     def test_rules_text_total_param(self) -> None:
         total = len(ALL_RULES)
         text = format_rules_text(ALL_RULES[:5], no_color=True, total=total)
-        assert f"5 rules (filtered from {total})" in text
+        assert f"5 / {total}" in text
 
     def test_check_ws_path(self) -> None:
         runner = CliRunner()
@@ -473,6 +473,93 @@ class TestCLI:
         )
         assert result.exit_code == 2
         assert "unknown profile" in result.output.lower()
+
+    def test_rules_single_lookup(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(cli, ["rules", "HF-001", "--no-color"])
+        assert result.exit_code == 0
+        assert "RULE" in result.output
+        assert "[HF-001]" in result.output
+        assert "error" in result.output
+        assert "layer: http.fsm" in result.output
+
+    def test_rules_single_lookup_json(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(cli, ["rules", "HF-001", "--format", "json"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert len(data["rules"]) == 1
+        assert data["rules"][0]["id"] == "HF-001"
+
+    def test_rules_unknown_id(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(cli, ["rules", "NOPE-999"])
+        assert result.exit_code == 2
+        assert "Unknown rule: NOPE-999" in result.output
+
+    def test_rules_single_ignores_filters(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(cli, ["rules", "HF-001", "--layer", "ws", "--no-color"])
+        assert result.exit_code == 0
+        assert "HF-001" in result.output
+
+    def test_check_help_exit_codes(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(cli, ["check", "--help"])
+        assert result.exit_code == 0
+        assert "Exit codes:" in result.output
+        assert "0  no violations" in result.output
+        assert "1  violations found" in result.output
+        assert "2  runtime error" in result.output
+
+    def test_check_scopes_label(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "tests._cli_fixtures:good_lifespan_app",
+                "--no-color",
+                "--path",
+                "/",
+                "--path",
+                "/other",
+            ],
+        )
+        assert result.exit_code == 0
+        assert "Scopes:" in result.output
+        assert "Paths:" not in result.output
+
+    def test_trace_min_severity_text(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "trace",
+                "tests._cli_fixtures:bad_app",
+                "--no-color",
+                "--min-severity",
+                "error",
+            ],
+        )
+        assert result.exit_code == 0
+        # With error filter, info/warning markers should not appear
+        for line in result.output.splitlines():
+            if "\u2190" in line:
+                assert "error" in line.lower()
+
+    def test_trace_min_severity_default(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "trace",
+                "tests._cli_fixtures:bad_app",
+                "--no-color",
+            ],
+        )
+        assert result.exit_code == 0
+        assert "Violations:" in result.output
 
     def test_check_user_defined_profile(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
         config = tmp_path / ".asgion.toml"
