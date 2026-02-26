@@ -61,4 +61,30 @@ async def good_ws_app(scope, receive, send):  # type: ignore[no-untyped-def]
     await receive()  # websocket.disconnect
 
 
+async def warn_only_app(scope, receive, send):  # type: ignore[no-untyped-def]
+    """App that triggers only info-level violations (SEM-013: text/* without charset)."""
+    await receive()
+    await send(
+        {
+            "type": "http.response.start",
+            "status": 200,
+            "headers": [(b"content-type", b"text/plain")],
+        }
+    )
+    await send({"type": "http.response.body", "body": b"OK", "more_body": False})
+
+
+async def raising_app(scope, receive, send):  # type: ignore[no-untyped-def]
+    if scope["type"] == "lifespan":
+        msg = await receive()
+        if msg["type"] == "lifespan.startup":
+            await send({"type": "lifespan.startup.complete"})
+        msg = await receive()
+        if msg["type"] == "lifespan.shutdown":
+            await send({"type": "lifespan.shutdown.complete"})
+        return
+    await receive()
+    raise RuntimeError("app crashed")
+
+
 not_callable = "i am a string"

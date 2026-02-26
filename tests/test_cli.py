@@ -495,7 +495,7 @@ class TestCLI:
         runner = CliRunner()
         result = runner.invoke(cli, ["rules", "NOPE-999"])
         assert result.exit_code == 2
-        assert "Unknown rule: NOPE-999" in result.output
+        assert "Error: unknown rule: NOPE-999" in result.output
 
     def test_rules_single_ignores_filters(self) -> None:
         runner = CliRunner()
@@ -508,7 +508,7 @@ class TestCLI:
         result = runner.invoke(cli, ["check", "--help"])
         assert result.exit_code == 0
         assert "Exit codes:" in result.output
-        assert "0  no violations" in result.output
+        assert "0  success" in result.output
         assert "1  violations found" in result.output
         assert "2  runtime error" in result.output
 
@@ -583,3 +583,143 @@ class TestCLI:
         data = json.loads(result.output)
         for v in data["violations"]:
             assert v["severity"] == "error"
+
+    def test_check_strict_min_severity_no_exit(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "tests._cli_fixtures:warn_only_app",
+                "--strict",
+                "--min-severity",
+                "error",
+                "--no-lifespan",
+            ],
+        )
+        assert result.exit_code == 0
+
+    def test_check_raising_app_text(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            ["check", "tests._cli_fixtures:raising_app", "--no-color", "--no-lifespan"],
+        )
+        assert result.exit_code == 0
+        assert "ERROR" in result.output
+
+    def test_check_raising_app_strict(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            ["check", "tests._cli_fixtures:raising_app", "--strict", "--no-lifespan"],
+        )
+        assert result.exit_code == 1
+
+    def test_trace_out_directory(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "trace",
+                "tests._cli_fixtures:good_lifespan_app",
+                "--out",
+                str(tmp_path),
+                "--no-lifespan",
+            ],
+        )
+        assert result.exit_code == 0
+        files = list(tmp_path.glob("*.json"))
+        assert len(files) > 0
+
+    def test_trace_format_json(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "trace",
+                "tests._cli_fixtures:good_lifespan_app",
+                "--format",
+                "json",
+                "--no-lifespan",
+            ],
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert "scope" in data
+
+    def test_check_invalid_config_exits_2(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
+        config = tmp_path / ".asgion.toml"
+        config.write_text("not valid [[[toml")
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "tests._cli_fixtures:good_app",
+                "--config",
+                str(config),
+                "--no-lifespan",
+            ],
+        )
+        assert result.exit_code == 2
+        assert "Error" in result.output
+
+    def test_trace_bad_module_exits_2(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(cli, ["trace", "nonexistent_module_xyz:app"])
+        assert result.exit_code == 2
+        assert "Error" in result.output
+
+    def test_no_color_env_empty(self) -> None:
+        runner = CliRunner(env={"NO_COLOR": ""})
+        result = runner.invoke(
+            cli,
+            ["check", "tests._cli_fixtures:good_lifespan_app", "--no-lifespan"],
+        )
+        assert result.exit_code == 0
+        assert "\033[" not in result.output
+
+    def test_check_raising_app_summary(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            ["check", "tests._cli_fixtures:raising_app", "--no-color", "--no-lifespan"],
+        )
+        assert result.exit_code == 0
+        assert "1 error" in result.output
+
+    def test_check_exclude_rules_glob(self) -> None:
+        runner = CliRunner()
+        # First get violations
+        result1 = runner.invoke(
+            cli,
+            ["check", "tests._cli_fixtures:bad_app", "--format", "json", "--no-lifespan"],
+        )
+        data1 = json.loads(result1.output)
+        assert data1["summary"]["total"] > 0
+
+        # Exclude all rules via glob
+        result2 = runner.invoke(
+            cli,
+            [
+                "check",
+                "tests._cli_fixtures:bad_app",
+                "--format",
+                "json",
+                "--no-lifespan",
+                "--exclude-rules",
+                "*",
+            ],
+        )
+        assert result2.exit_code == 0
+        data2 = json.loads(result2.output)
+        assert data2["summary"]["total"] == 0
+
+    def test_rules_json_total_available(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(cli, ["rules", "--format", "json", "--layer", "http"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert "total_available" in data
+        assert data["total_available"] == len(ALL_RULES)

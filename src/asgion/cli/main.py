@@ -51,7 +51,7 @@ def cli() -> None:
     "paths",
     multiple=True,
     default=("/",),
-    help=("Paths to check (repeatable).  [default: /]  Prefix: http:/path, ws:/path, wss:/path."),
+    help=("Paths to check (repeatable).  [default: /]  Prefix: ws:/path for WebSocket."),
 )
 @click.option("--strict", is_flag=True, help="Exit 1 on any violation found.")
 @click.option(
@@ -117,9 +117,9 @@ def check(
 
     \b
     Exit codes:
-      0  no violations (or violations below --min-severity)
-      1  violations found (with --strict)
-      2  runtime error (bad module path, unknown profile, etc.)
+      0  success (without --strict, always 0)
+      1  violations found (only with --strict)
+      2  runtime error (bad module path, invalid config, etc.)
     """
     try:
         app = load_app(app_path)
@@ -151,7 +151,21 @@ def check(
             exclude_rules=base.exclude_rules | config.exclude_rules,
         )
 
-    excluded = {r.strip() for r in exclude_rules.split(",") if r.strip()} if exclude_rules else None
+    raw_excluded = (
+        {r.strip() for r in exclude_rules.split(",") if r.strip()} if exclude_rules else None
+    )
+    excluded: set[str] | None = None
+    if raw_excluded:
+        from fnmatch import fnmatch
+
+        expanded: set[str] = set()
+        all_ids = [r.id for r in ALL_RULES]
+        for pattern in raw_excluded:
+            if any(c in pattern for c in "*?["):
+                expanded.update(rid for rid in all_ids if fnmatch(rid, pattern))
+            else:
+                expanded.add(pattern)
+        excluded = expanded
     severity = Severity(min_severity)
 
     report = run_check(
@@ -219,7 +233,7 @@ def rules(
     if rule_id is not None:
         rule = RULES.get(rule_id)
         if rule is None:
-            click.echo(f"Unknown rule: {rule_id}", err=True)
+            click.echo(f"Error: unknown rule: {rule_id}", err=True)
             sys.exit(2)
         if fmt == "json":
             click.echo(format_rules_json([rule]))
@@ -237,7 +251,7 @@ def rules(
     total = len(ALL_RULES) if (layer is not None or sev is not None) else None
 
     if fmt == "json":
-        click.echo(format_rules_json(filtered))
+        click.echo(format_rules_json(filtered, total=total))
     else:
         click.echo(format_rules_text(filtered, no_color=no_color, total=total))
 
@@ -249,7 +263,7 @@ def rules(
     "paths",
     multiple=True,
     default=("/",),
-    help=("Paths to trace (repeatable).  [default: /]  Prefix: ws:/path, wss:/path for WebSocket."),
+    help=("Paths to trace (repeatable).  [default: /]  Prefix: ws:/path for WebSocket."),
 )
 @click.option(
     "--format",

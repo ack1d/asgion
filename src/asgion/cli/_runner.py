@@ -4,7 +4,8 @@ import asyncio
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from asgion.core._types import SEVERITY_LEVEL, Message, Scope, Severity
+from asgion.cli._sessions import http_session, lifespan_session, ws_session
+from asgion.core._types import SEVERITY_LEVEL, Severity
 from asgion.core.wrapper import inspect
 
 if TYPE_CHECKING:
@@ -47,26 +48,7 @@ async def _run_lifespan(
     exclude_rules: set[str] | None = None,
 ) -> CheckResult:
     violations: list[Violation] = []
-    scope: Scope = {"type": "lifespan", "asgi": {"version": "3.0"}}
-
-    phase = "startup"
-
-    async def receive() -> Message:
-        nonlocal phase
-        if phase == "startup":
-            phase = "started"
-            return {"type": "lifespan.startup"}
-        if phase == "shutdown":
-            phase = "done"
-            return {"type": "lifespan.shutdown"}
-        await asyncio.sleep(999)
-        return {"type": "lifespan.shutdown"}
-
-    async def send(message: Message) -> None:
-        nonlocal phase
-        msg_type = message.get("type", "")
-        if msg_type in ("lifespan.startup.complete", "lifespan.startup.failed"):
-            phase = "shutdown"
+    scope, receive, send = lifespan_session()
 
     wrapped = inspect(
         app,  # type: ignore[arg-type]
@@ -93,42 +75,7 @@ async def _run_ws(
     exclude_rules: set[str] | None = None,
 ) -> CheckResult:
     violations: list[Violation] = []
-    scope: Scope = {
-        "type": "websocket",
-        "asgi": {"version": "3.0"},
-        "http_version": "1.1",
-        "scheme": "ws",
-        "path": path,
-        "raw_path": path.encode(),
-        "query_string": b"",
-        "root_path": "",
-        "headers": [],
-        "subprotocols": [],
-    }
-
-    phase = "connect"
-
-    async def receive() -> Message:
-        nonlocal phase
-        if phase == "connect":
-            phase = "connected"
-            return {"type": "websocket.connect"}
-        if phase == "message":
-            phase = "disconnect"
-            return {"type": "websocket.receive", "text": ""}
-        if phase == "disconnect":
-            phase = "done"
-            return {"type": "websocket.disconnect", "code": 1000}
-        await asyncio.sleep(999)
-        return {"type": "websocket.disconnect", "code": 1000}
-
-    async def send(message: Message) -> None:
-        nonlocal phase
-        msg_type = message.get("type", "")
-        if msg_type == "websocket.accept" and phase == "connected":
-            phase = "message"
-        elif msg_type == "websocket.close":
-            phase = "done"
+    scope, receive, send = ws_session(path=path)
 
     wrapped = inspect(
         app,  # type: ignore[arg-type]
@@ -156,31 +103,7 @@ async def _run_http(
     exclude_rules: set[str] | None = None,
 ) -> CheckResult:
     violations: list[Violation] = []
-    scope: Scope = {
-        "type": "http",
-        "asgi": {"version": "3.0"},
-        "http_version": "1.1",
-        "method": method,
-        "scheme": "https",
-        "path": path,
-        "raw_path": path.encode(),
-        "query_string": b"",
-        "root_path": "",
-        "headers": [],
-    }
-
-    request_sent = False
-
-    async def receive() -> Message:
-        nonlocal request_sent
-        if not request_sent:
-            request_sent = True
-            return {"type": "http.request", "body": b"", "more_body": False}
-        await asyncio.sleep(999)
-        return {"type": "http.disconnect"}
-
-    async def send(message: Message) -> None:
-        pass
+    scope, receive, send = http_session(path=path, method=method)
 
     wrapped = inspect(
         app,  # type: ignore[arg-type]

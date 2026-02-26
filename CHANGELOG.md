@@ -2,7 +2,22 @@
 
 ## Unreleased
 
-- ...
+### Features
+
+- `asgion rules HF-002` — single rule lookup by ID with summary, hint, and layer.
+- `asgion check --help` now documents exit codes: 0 (success), 1 (violations with `--strict`), 2 (runtime error).
+- `asgion trace --min-severity` — filter violation markers by severity in text output.
+- `asgion rules --format json` now includes `total_available` when filtering by `--layer` or `--severity`.
+
+### Fixes
+
+- `asgion check` summary footer: `Paths:` renamed to `Scopes:` — lifespan is a scope, not a path.
+- `asgion trace`: violation markers now colored by severity (error=red, warning=yellow, info=cyan, perf=dim) instead of all-red.
+- `asgion rules`: missing layers (Scope, Semantic, Extensions) now displayed — all 164 rules visible.
+- `asgion trace`: application exceptions no longer crash the CLI or get silently swallowed; errors are reported and partial traces are shown.
+- `--exclude-rules` now supports glob patterns (e.g. `SEM-*`), matching config file behavior.
+- `NO_COLOR=""` now correctly disables colors per no-color.org spec.
+- `--path` help text in `check` and `trace` unified: `ws:/path for WebSocket`.
 
 ## 0.5.0
 

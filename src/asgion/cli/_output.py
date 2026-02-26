@@ -36,7 +36,7 @@ _PHASE_COLORS: dict[str, str] = {
 def _use_color(no_color_flag: bool) -> bool:
     if no_color_flag:
         return False
-    return not os.environ.get("NO_COLOR", "")
+    return "NO_COLOR" not in os.environ
 
 
 def _c(text: str, code: str, *, color: bool) -> str:
@@ -287,8 +287,8 @@ def format_rule_detail(rule: Rule, *, no_color: bool = False) -> str:
     return "\n".join(lines)
 
 
-def format_rules_json(rules: list[Rule]) -> str:
-    data = {
+def format_rules_json(rules: list[Rule], *, total: int | None = None) -> str:
+    data: dict[str, object] = {
         "version": __version__,
         "rules": [
             {
@@ -303,6 +303,8 @@ def format_rules_json(rules: list[Rule]) -> str:
         ],
         "total": len(rules),
     }
+    if total is not None:
+        data["total_available"] = total
     return json.dumps(data, indent=2)
 
 
