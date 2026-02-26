@@ -6,13 +6,13 @@ and ``--asgi-strict`` CLI flag.
 Usage::
 
     async def test_my_app(asgi_inspect):
-        app = asgi_inspect(my_asgi_app)
+        inspector = asgi_inspect(my_asgi_app)
         # ... drive the app via httpx, starlette TestClient, etc.
-        assert app.violations == []
+        assert inspector.violations == []
 
     @pytest.mark.asgi_validate(exclude_rules={"SEM-002"}, min_severity="warning")
     async def test_strict(asgi_inspect):
-        app = asgi_inspect(my_asgi_app)
+        inspector = asgi_inspect(my_asgi_app)
         # Violations auto-checked at teardown; test fails if any found.
 
 CLI flag (applies asgi_validate to all tests using asgi_inspect)::
