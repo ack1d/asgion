@@ -51,7 +51,7 @@ def cli() -> None:
     "paths",
     multiple=True,
     default=("/",),
-    help=("Paths to check (repeatable).  [default: /]  Prefix: ws:/path for WebSocket."),
+    help="Paths to check (repeatable).  [default: /]  Prefix: ws:/path for WebSocket.",
 )
 @click.option("--strict", is_flag=True, help="Exit 1 on any violation found.")
 @click.option(
@@ -76,6 +76,7 @@ def cli() -> None:
 )
 @click.option("--no-color", is_flag=True, envvar="NO_COLOR", help="Disable ANSI colors.")
 @click.option("--no-lifespan", is_flag=True, help="Skip lifespan startup/shutdown checks.")
+@click.option("-q", "--quiet", is_flag=True, help="Suppress all output; exit code only.")
 @click.option(
     "--config",
     "config_path",
@@ -101,6 +102,7 @@ def check(
     min_severity: str,
     no_color: bool,
     no_lifespan: bool,
+    quiet: bool,
     config_path: str | None,
     profile: str | None,
 ) -> None:
@@ -177,10 +179,11 @@ def check(
         run_lifespan=not no_lifespan,
     )
 
-    if fmt == "json":
-        click.echo(format_json(report, min_severity=severity))
-    else:
-        click.echo(format_text(report, min_severity=severity, no_color=no_color))
+    if not quiet:
+        if fmt == "json":
+            click.echo(format_json(report, min_severity=severity))
+        else:
+            click.echo(format_text(report, min_severity=severity, no_color=no_color))
 
     violations = report.filtered(severity)
     if strict and violations:
@@ -263,7 +266,7 @@ def rules(
     "paths",
     multiple=True,
     default=("/",),
-    help=("Paths to trace (repeatable).  [default: /]  Prefix: ws:/path for WebSocket."),
+    help="Paths to trace (repeatable).  [default: /]  Prefix: ws:/path for WebSocket.",
 )
 @click.option(
     "--format",
@@ -289,6 +292,7 @@ def rules(
     help="Max response body to record per event (bytes).",
 )
 @click.option("--no-lifespan", is_flag=True, help="Skip lifespan startup/shutdown tracing.")
+@click.option("-q", "--quiet", is_flag=True, help="Suppress all output; exit code only.")
 @click.option(
     "--min-severity",
     default="perf",
@@ -304,6 +308,7 @@ def trace(
     trace_dir: str | None,
     max_body_size: int,
     no_lifespan: bool,
+    quiet: bool,
     min_severity: str,
 ) -> None:
     """Record every receive()/send() as structured traces.
@@ -336,7 +341,7 @@ def trace(
 
     severity = Severity(min_severity)
 
-    if trace_dir is None:
+    if trace_dir is None and not quiet:
         if fmt == "json":
             click.echo(format_trace_json(records))
         else:
