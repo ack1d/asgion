@@ -152,16 +152,16 @@ def check(
 
     \b
     Examples:
-      asgion check myapp:app
-      asgion check myapp:app --path /api/users --path ws:/ws/chat
-      asgion check myapp:app --strict --min-severity warning
-      asgion check myapp:app --profile recommended --format json
+      asgion check myapp:app \n
+      asgion check myapp:app --path /api/users --path ws:/ws/chat \n
+      asgion check myapp:app --strict --min-severity warning \n
+      asgion check myapp:app --profile recommended --format JSON \n
 
     \b
     Exit codes:
-      0  success (without --strict, always 0)
-      1  violations found (only with --strict)
-      2  runtime error (bad module path, invalid config, etc.)
+      0  success (without --strict, always 0) \n
+      1  violations found (only with --strict) \n
+      2  runtime error (bad module path, invalid config, etc.) \n
     """
     try:
         app = load_app(app_path)
@@ -279,10 +279,10 @@ def rules(
 
     \b
     Examples:
-      asgion rules
-      asgion rules HF-002
-      asgion rules --layer http --severity error
-      asgion rules --format json
+      asgion rules \n
+      asgion rules HF-002 \n
+      asgion rules --layer http --severity error \n
+      asgion rules --format JSON \n
     """
     if rule_id is not None:
         rule = RULES.get(rule_id)
@@ -373,10 +373,10 @@ def trace(
 
     \b
     Examples:
-      asgion trace myapp:app
-      asgion trace myapp:app --format json
-      asgion trace myapp:app --path /api/users --out ./traces/
-      asgion trace myapp:app --path ws:/ws/chat
+      asgion trace myapp:app \n
+      asgion trace myapp:app --format json \n
+      asgion trace myapp:app --path /api/users --out ./traces/ \n
+      asgion trace myapp:app --path ws:/ws/chat \n
     """
     try:
         app = load_app(app_path)
@@ -411,3 +411,62 @@ def trace(
         has_violations = any(r.summary.violations for r in records)
         if has_violations:
             sys.exit(1)
+
+
+_INIT_BODY = """\
+profile = "recommended"  # "strict" | "recommended" | "minimal"
+
+# Rule filtering
+# min_severity = "perf"           # "perf" | "info" | "warning" | "error"
+# include_rules = []              # allowlist, e.g. ["HF-*", "SEM-001"]
+# exclude_rules = []              # denylist, e.g. ["SEM-006", "SEM-009"]
+# categories = []                 # layer filter, e.g. ["http.fsm", "http.semantic"]
+
+# Semantic thresholds
+# ttfb_threshold = 5.0            # SEM-006: seconds
+# lifecycle_threshold = 30.0      # SEM-007: seconds
+# body_size_threshold = 10_485_760  # SEM-008: bytes (10 MB)
+# buffer_chunk_threshold = 1_048_576  # SEM-009: bytes (1 MB)
+# body_delivery_threshold = 10.0  # SEM-010: seconds
+# chunk_count_threshold = 100     # SEM-011: max body chunks
+"""
+
+
+@cli.command()
+@click.option("--pyproject", is_flag=True, help="Print [tool.asgion] block for pyproject.toml.")
+@click.option("--force", is_flag=True, help="Overwrite existing .asgion.toml.")
+def init(pyproject: bool, force: bool) -> None:
+    """Generate a default asgion configuration file.
+
+    \b
+    Examples:
+      asgion init                # create .asgion.toml \n
+      asgion init --pyproject    # print [tool.asgion] block to stdout \n
+      asgion init --force        # overwrite existing .asgion.toml \n
+    """
+    if pyproject:
+        toml_path = Path("pyproject.toml")
+        if toml_path.exists():
+            import tomllib
+
+            with toml_path.open("rb") as f:
+                data = tomllib.load(f)
+            if "asgion" in data.get("tool", {}):
+                click.echo(
+                    "Warning: pyproject.toml already contains [tool.asgion]",
+                    err=True,
+                )
+        click.echo(f"[tool.asgion]\n{_INIT_BODY}")
+        return
+
+    target = Path(".asgion.toml")
+    if target.exists() and not force:
+        flag = click.style("--force", bold=True)
+        click.echo(
+            f"Error: {target} already exists. Use {flag} to overwrite.",
+            err=True,
+        )
+        sys.exit(2)
+
+    target.write_text(f"# asgion configuration\n# https://github.com/ack1d/asgion\n\n{_INIT_BODY}")
+    click.echo(f"Created {target}")
