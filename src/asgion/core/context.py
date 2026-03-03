@@ -86,6 +86,8 @@ class ConnectionContext:
 
     start_time: float = field(default_factory=time.monotonic)
 
+    extra: dict[str, Any] = field(default_factory=dict)
+
     _rule_allowed: RuleFilter | None = None
     _on_violation: ViolationCallback | None = None
 

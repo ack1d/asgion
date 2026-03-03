@@ -169,9 +169,7 @@ def check(
 
     if select:
         cli_include = frozenset(r.strip() for r in select.split(",") if r.strip())
-        config = dataclasses.replace(
-            config, include_rules=config.include_rules | cli_include
-        )
+        config = dataclasses.replace(config, include_rules=config.include_rules | cli_include)
 
     raw_excluded = (
         {r.strip() for r in exclude_rules.split(",") if r.strip()} if exclude_rules else None

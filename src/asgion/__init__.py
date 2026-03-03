@@ -15,12 +15,16 @@ from asgion.core.wrapper import inspect
 from asgion.trace import (
     FileStorage,
     MemoryStorage,
+    TraceEnvironment,
     TraceEvent,
+    TraceFormatError,
     TraceRecord,
     TraceScope,
     TraceStorage,
     TraceSummary,
+    TraceViolation,
 )
+from asgion.trace._format import deserialize
 
 __version__ = version("asgion")
 
@@ -35,13 +39,17 @@ __all__ = [
     "MemoryStorage",
     "Rule",
     "Severity",
+    "TraceEnvironment",
     "TraceEvent",
+    "TraceFormatError",
     "TraceRecord",
     "TraceScope",
     "TraceStorage",
     "TraceSummary",
+    "TraceViolation",
     "Violation",
     "__version__",
+    "deserialize",
     "inspect",
     "load_config",
     "load_user_profiles",

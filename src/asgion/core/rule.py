@@ -28,6 +28,8 @@ class Rule:
     hint: str = ""
     layer: str = ""
     scope_types: tuple[str, ...] = ()
+    tags: frozenset[str] = frozenset()
+    deprecated: bool = False
 
     def __str__(self) -> str:
         return f"[{self.id}] {self.summary}"
