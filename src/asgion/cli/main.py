@@ -316,6 +316,7 @@ def rules(
     help="Max response body to record per event (bytes).",
 )
 @click.option("--no-lifespan", is_flag=True, help="Skip lifespan startup/shutdown tracing.")
+@click.option("--strict", is_flag=True, help="Exit 1 on any violation found.")
 @click.option("-q", "--quiet", is_flag=True, help="Suppress all output; exit code only.")
 @click.option(
     "--min-severity",
@@ -332,6 +333,7 @@ def trace(
     trace_dir: str | None,
     max_body_size: int,
     no_lifespan: bool,
+    strict: bool,
     quiet: bool,
     min_severity: str,
 ) -> None:
@@ -377,3 +379,8 @@ def trace(
                     min_severity=severity,
                 )
             )
+
+    if strict:
+        has_violations = any(r.summary.violations for r in records)
+        if has_violations:
+            sys.exit(1)
