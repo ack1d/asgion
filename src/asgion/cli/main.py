@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import sys
+from pathlib import Path
 
 import click
 
@@ -83,6 +84,12 @@ def cli() -> None:
 @click.option("--no-lifespan", is_flag=True, help="Skip lifespan startup/shutdown checks.")
 @click.option("-q", "--quiet", is_flag=True, help="Suppress all output; exit code only.")
 @click.option(
+    "--out",
+    default=None,
+    type=click.Path(),
+    help="Write output to FILE instead of stdout.",
+)
+@click.option(
     "--config",
     "config_path",
     default=None,
@@ -109,6 +116,7 @@ def check(
     no_color: bool,
     no_lifespan: bool,
     quiet: bool,
+    out: str | None,
     config_path: str | None,
     profile: str | None,
 ) -> None:
@@ -193,9 +201,13 @@ def check(
 
     if not quiet:
         if fmt == "json":
-            click.echo(format_json(report, min_severity=severity))
+            output = format_json(report, min_severity=severity)
         else:
-            click.echo(format_text(report, min_severity=severity, no_color=no_color))
+            output = format_text(report, min_severity=severity, no_color=no_color)
+        if out is not None:
+            Path(out).write_text(output + "\n")
+        else:
+            click.echo(output)
 
     violations = report.filtered(severity)
     if strict and violations:
