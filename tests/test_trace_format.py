@@ -232,8 +232,8 @@ class TestFormatTraceText:
     def test_http_trace_timing(self) -> None:
         record = _make_record()
         text = format_trace_text([record], no_color=True)
-        assert "0.001ms" in text  # total_ns=1000
-        assert "TTFB 0.001ms" in text  # ttfb_ns=500 -> 0.001ms
+        assert "1µs" in text  # total_ns=1000
+        assert "TTFB 0µs" in text  # ttfb_ns=500 -> <1µs
 
     def test_lifespan_trace_no_method_path(self) -> None:
         record = _make_record(
@@ -366,8 +366,8 @@ class TestFormatTraceText:
             summary=TraceSummary(total_ns=400_000, ttfb_ns=100_000, event_count=2, violations=()),
         )
         text = format_trace_text([record], no_color=True)
-        # First event has no delta, second has +0.200ms
-        assert "(+0.200ms)" in text
+        # First event has no delta, second has +200µs
+        assert "(+200µs)" in text
 
     def test_first_event_no_delta(self) -> None:
         record = _make_record(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -28,6 +29,7 @@ class CheckResult:
 class CheckReport:
     app_path: str
     results: list[CheckResult] = field(default_factory=list)
+    elapsed_s: float = 0.0
 
     @property
     def all_violations(self) -> list[Violation]:
@@ -154,6 +156,7 @@ def run_check(
     """
     _excluded = exclude_rules
     report = CheckReport(app_path=app_path)
+    t0 = time.perf_counter()
 
     async def _run() -> None:
         if run_lifespan:
@@ -170,4 +173,5 @@ def run_check(
                 )
 
     asyncio.run(_run())
+    report.elapsed_s = time.perf_counter() - t0
     return report

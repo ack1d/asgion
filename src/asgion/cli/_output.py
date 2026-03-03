@@ -99,6 +99,7 @@ def format_text(
             all_filtered,
             error_count=error_count,
             path_count=len(report.results),
+            elapsed_s=report.elapsed_s,
             color=color,
         )
     )
@@ -142,17 +143,36 @@ def _violations_summary(
     return ", ".join(parts)
 
 
+def _fmt_duration(s: float) -> str:
+    if s < 0.001:
+        return f"{s * 1_000_000:.0f}\u00b5s"
+    if s < 1:
+        return f"{s * 1000:.1f}ms"
+    if s < 60:
+        return f"{s:.2f}s"
+    m, sec = divmod(s, 60)
+    if m < 60:
+        return f"{int(m)}m{sec:.0f}s"
+    h, m = divmod(m, 60)
+    return f"{int(h)}h{int(m)}m{sec:.0f}s"
+
+
 def _summary_line(
     violations: list[Violation],
     *,
     error_count: int = 0,
     path_count: int = 1,
+    elapsed_s: float = 0.0,
     color: bool,
 ) -> str:
     v_part = _violations_summary(violations, error_count=error_count, color=color)
+    parts: list[str] = []
     if path_count > 1:
-        return f"Scopes: {path_count}  |  {v_part}"
-    return v_part
+        parts.append(f"Scopes: {path_count}")
+    parts.append(v_part)
+    if elapsed_s > 0:
+        parts.append(_c(_fmt_duration(elapsed_s), _DIM, color=color))
+    return "  |  ".join(parts)
 
 
 def format_json(
@@ -335,8 +355,8 @@ def _violation_breakdown(violations: tuple[TraceViolation, ...], *, color: bool)
     )
 
 
-def _ns_to_ms(ns: int) -> str:
-    return f"{ns / 1_000_000:.3f}ms"
+def _fmt_ns(ns: int) -> str:
+    return _fmt_duration(ns / 1_000_000_000)
 
 
 def _b64_byte_count(b64: str) -> int:
@@ -402,7 +422,7 @@ def _format_event_line(
     color: bool,
     violation_ids: list[str] | None = None,
 ) -> str:
-    t = _ns_to_ms(event.t_ns).rjust(10)
+    t = _fmt_ns(event.t_ns).rjust(10)
     phase_color = _PHASE_COLORS.get(event.phase, _DIM)
     phase = _c(event.phase.ljust(7), phase_color, color=color)
     etype = event.type
@@ -415,7 +435,7 @@ def _format_event_line(
     delta = ""
     if prev_ns is not None:
         delta_ns = event.t_ns - prev_ns
-        delta = "  " + _c(f"(+{_ns_to_ms(delta_ns)})", _DIM, color=color)
+        delta = "  " + _c(f"(+{_fmt_ns(delta_ns)})", _DIM, color=color)
     marker = ""
     if violation_ids:
         parts = []
@@ -431,7 +451,7 @@ def _format_event_line(
 def _trace_header(record: TraceRecord, *, color: bool) -> str:
     scope = record.scope
     summary = record.summary
-    duration = _ns_to_ms(summary.total_ns)
+    duration = _fmt_ns(summary.total_ns)
 
     if scope.type == "lifespan":
         label = "lifespan"
@@ -444,7 +464,7 @@ def _trace_header(record: TraceRecord, *, color: bool) -> str:
 
     timing = duration
     if summary.ttfb_ns is not None:
-        timing += f", TTFB {_ns_to_ms(summary.ttfb_ns)}"
+        timing += f", TTFB {_fmt_ns(summary.ttfb_ns)}"
 
     tag = _c("TRACE", _BOLD, color=color)
     return f"{tag}  {label} ({timing})"
@@ -554,7 +574,7 @@ def format_trace_text(
             if breakdown:
                 label += f" ({breakdown})"
             segments.append(_c(label, _RED, color=color))
-        segments.append(_ns_to_ms(total_ns))
+        segments.append(_fmt_ns(total_ns))
         parts.append("")
         prefix = f"{app_path} | " if app_path else ""
         parts.append(_c("─", _DIM, color=color) + " " + prefix + " | ".join(segments))
