@@ -11,7 +11,7 @@ def load_app(app_path: str, *, cwd: str | None = None) -> object:
     """Load an ASGI application from a ``module:attribute`` string.
 
     Adds *cwd* (default: current directory) to ``sys.path[0]`` so that
-    local modules can be imported, matching uvicorn behaviour.
+    local modules can be imported, matching uvicorn behavior.
     """
     if ":" not in app_path:
         msg = f"Invalid app path {app_path!r} - expected 'module:attribute' (e.g. 'myapp:app')"

@@ -18,7 +18,7 @@ class Rule:
             summary="Send after client disconnected",
             hint="Check for http.disconnect before sending response",
             layer="http.fsm",
-            scope_types=("http",),
+            scope_types=("http",)
         )
     """
 

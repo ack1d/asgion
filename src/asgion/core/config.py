@@ -208,7 +208,7 @@ def load_config(path: Path | str | None = None) -> AsgionConfig:
         missing keys.
 
     Raises:
-        :class:`ConfigError`: If the file contains an unrecognised value
+        :class:`ConfigError`: If the file contains an unrecognized value
             (e.g. ``profile = "typo"`` or ``min_severity = "extreme"``).
 
     """

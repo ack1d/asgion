@@ -69,7 +69,7 @@ class ConnectionContext:
     """Tracks state for a single ASGI connection (scope invocation).
 
     Each call to ``app(scope, receive, send)`` gets its own context.
-    Only the protocol-specific state matching ``scope_type`` is initialised.
+    Only the protocol-specific state matching ``scope_type`` is initialized.
     """
 
     scope: dict[str, Any]
