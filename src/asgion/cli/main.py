@@ -63,6 +63,11 @@ def cli() -> None:
     help="Output format.",
 )
 @click.option(
+    "--select",
+    default="",
+    help="Comma-separated rule allowlist (e.g. HF-*,SEM-001). Only matching rules run.",
+)
+@click.option(
     "--exclude-rules",
     default="",
     help="Comma-separated rule IDs to suppress (e.g. SEM-006,SEM-009).",
@@ -98,6 +103,7 @@ def check(
     paths: tuple[str, ...],
     strict: bool,
     fmt: str,
+    select: str,
     exclude_rules: str,
     min_severity: str,
     no_color: bool,
@@ -151,6 +157,12 @@ def check(
             include_rules=base.include_rules,
             categories=base.categories,
             exclude_rules=base.exclude_rules | config.exclude_rules,
+        )
+
+    if select:
+        cli_include = frozenset(r.strip() for r in select.split(",") if r.strip())
+        config = dataclasses.replace(
+            config, include_rules=config.include_rules | cli_include
         )
 
     raw_excluded = (
