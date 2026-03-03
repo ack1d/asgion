@@ -5,15 +5,13 @@ import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from asgion.cli._sessions import http_session, lifespan_session, ws_session
+from asgion.cli._driver import drive
 from asgion.core._types import SEVERITY_LEVEL, Severity
-from asgion.core.wrapper import inspect
+from asgion.core.inspector import Inspector
 
 if TYPE_CHECKING:
     from asgion.core.config import AsgionConfig
     from asgion.core.violation import Violation
-
-_TIMEOUT = 5.0
 
 
 @dataclass
@@ -43,102 +41,6 @@ class CheckReport:
         return [v for v in self.all_violations if SEVERITY_LEVEL[v.severity] >= level]
 
 
-async def _run_lifespan(
-    app: object,
-    *,
-    config: AsgionConfig | None = None,
-    exclude_rules: set[str] | None = None,
-) -> CheckResult:
-    violations: list[Violation] = []
-    scope, receive, send = lifespan_session()
-
-    wrapped = inspect(
-        app,  # type: ignore[arg-type]
-        config=config,
-        on_violation=violations.append,
-        exclude_rules=exclude_rules,
-    )
-    result = CheckResult(scope_type="lifespan")
-    try:
-        await asyncio.wait_for(wrapped(scope, receive, send), timeout=_TIMEOUT)
-    except TimeoutError:
-        pass
-    except Exception as exc:  # noqa: BLE001
-        result.error = str(exc)
-    result.violations = violations
-    return result
-
-
-async def _run_ws(
-    app: object,
-    *,
-    path: str = "/ws",
-    config: AsgionConfig | None = None,
-    exclude_rules: set[str] | None = None,
-) -> CheckResult:
-    violations: list[Violation] = []
-    scope, receive, send = ws_session(path=path)
-
-    wrapped = inspect(
-        app,  # type: ignore[arg-type]
-        config=config,
-        on_violation=violations.append,
-        exclude_rules=exclude_rules,
-    )
-    result = CheckResult(scope_type="websocket", path=path)
-    try:
-        await asyncio.wait_for(wrapped(scope, receive, send), timeout=_TIMEOUT)
-    except TimeoutError:
-        pass
-    except Exception as exc:  # noqa: BLE001
-        result.error = str(exc)
-    result.violations = violations
-    return result
-
-
-async def _run_http(
-    app: object,
-    *,
-    path: str = "/",
-    method: str = "GET",
-    config: AsgionConfig | None = None,
-    exclude_rules: set[str] | None = None,
-) -> CheckResult:
-    violations: list[Violation] = []
-    scope, receive, send = http_session(path=path, method=method)
-
-    wrapped = inspect(
-        app,  # type: ignore[arg-type]
-        config=config,
-        on_violation=violations.append,
-        exclude_rules=exclude_rules,
-    )
-    result = CheckResult(scope_type="http", path=path, method=method)
-    try:
-        await asyncio.wait_for(wrapped(scope, receive, send), timeout=_TIMEOUT)
-    except TimeoutError:
-        pass
-    except Exception as exc:  # noqa: BLE001
-        result.error = str(exc)
-    result.violations = violations
-    return result
-
-
-_WS_PREFIXES = ("ws:", "wss:")
-_HTTP_PREFIXES = ("http:", "https:")
-
-
-def _parse_path(p: str) -> tuple[str, str]:
-    """Return (scope_type, path) for a path string with optional protocol prefix."""
-    for prefix in _WS_PREFIXES:
-        if p.startswith(prefix):
-            return "websocket", p[len(prefix) :]
-    for prefix in _HTTP_PREFIXES:
-        if p.startswith(prefix):
-            return "http", p[len(prefix) :]
-    return "http", p
-
-
 def run_check(
     app: object,
     *,
@@ -147,6 +49,9 @@ def run_check(
     config: AsgionConfig | None = None,
     exclude_rules: set[str] | None = None,
     run_lifespan: bool = True,
+    default_method: str = "GET",
+    headers: list[tuple[bytes, bytes]] | None = None,
+    body: bytes = b"",
 ) -> CheckReport:
     """Run ASGI protocol checks and return a report.
 
@@ -154,23 +59,36 @@ def run_check(
     or a prefixed path to specify the scope type:
     ``http:/path``, ``https:/path``, ``ws:/path``, ``wss:/path``.
     """
-    _excluded = exclude_rules
+    inspector = Inspector(
+        app,  # type: ignore[arg-type]
+        config=config,
+        exclude_rules=exclude_rules,
+    )
     report = CheckReport(app_path=app_path)
     t0 = time.perf_counter()
 
     async def _run() -> None:
-        if run_lifespan:
-            report.results.append(await _run_lifespan(app, config=config, exclude_rules=_excluded))
-        for raw in paths:
-            scope_type, path = _parse_path(raw)
-            if scope_type == "websocket":
-                report.results.append(
-                    await _run_ws(app, path=path, config=config, exclude_rules=_excluded)
+        runs = await drive(
+            inspector,
+            paths,
+            run_lifespan=run_lifespan,
+            default_method=default_method,
+            headers=headers,
+            body=body,
+        )
+        violations = inspector.violations
+        for i, run in enumerate(runs):
+            start = run.violation_start
+            end = runs[i + 1].violation_start if i + 1 < len(runs) else len(violations)
+            report.results.append(
+                CheckResult(
+                    scope_type=run.scope_type,
+                    path=run.path,
+                    method=run.method,
+                    violations=violations[start:end],
+                    error=run.error,
                 )
-            else:
-                report.results.append(
-                    await _run_http(app, path=path, config=config, exclude_rules=_excluded)
-                )
+            )
 
     asyncio.run(_run())
     report.elapsed_s = time.perf_counter() - t0

@@ -31,6 +31,38 @@ from asgion.core.config import (
 )
 from asgion.rules import ALL_RULES, RULES
 
+
+def _parse_headers(raw: tuple[str, ...]) -> list[tuple[bytes, bytes]]:
+    result: list[tuple[bytes, bytes]] = []
+    for h in raw:
+        name, _, value = h.partition(":")
+        name = name.strip()
+        if not name:
+            continue
+        result.append((name.lower().encode(), value.strip().encode()))
+    return result
+
+
+def _load(app_path: str) -> object:
+    try:
+        return load_app(app_path)
+    except LoadError as exc:
+        click.echo(f"Error: {exc}", err=True)
+        sys.exit(2)
+
+
+def _prepare_request(
+    method: str,
+    raw_headers: tuple[str, ...],
+    raw_body: str | None,
+) -> tuple[str, list[tuple[bytes, bytes]] | None, bytes]:
+    return (
+        method.upper(),
+        _parse_headers(raw_headers) if raw_headers else None,
+        raw_body.encode() if raw_body is not None else b"",
+    )
+
+
 _LAYERS = [
     "general",
     "http",
@@ -107,6 +139,26 @@ def cli() -> None:
     help="Only check rules from this layer (repeatable). Prefix match: 'http' includes http.*.",
 )
 @click.option("--no-lifespan", is_flag=True, help="Skip lifespan startup/shutdown checks.")
+@click.option(
+    "--method",
+    default="GET",
+    show_default=True,
+    help="Default HTTP method for paths without a method prefix.",
+)
+@click.option(
+    "-H",
+    "--header",
+    "raw_headers",
+    multiple=True,
+    help="Custom header (repeatable). Format: 'Name: value'.",
+)
+@click.option(
+    "-d",
+    "--body",
+    "raw_body",
+    default=None,
+    help="Request body string (sent as-is in http.request).",
+)
 @click.option("-q", "--quiet", is_flag=True, help="Suppress all output; exit code only.")
 @click.option(
     "--out",
@@ -141,6 +193,9 @@ def check(
     no_color: bool,
     layers: tuple[str, ...],
     no_lifespan: bool,
+    method: str,
+    raw_headers: tuple[str, ...],
+    raw_body: str | None,
     quiet: bool,
     out: str | None,
     config_path: str | None,
@@ -155,7 +210,7 @@ def check(
       asgion check myapp:app \n
       asgion check myapp:app --path /api/users --path ws:/ws/chat \n
       asgion check myapp:app --strict --min-severity warning \n
-      asgion check myapp:app --profile recommended --format JSON \n
+      asgion check myapp:app --path "POST:/api/users" -H "Content-Type: application/json" -d '{}' \n
 
     \b
     Exit codes:
@@ -163,11 +218,7 @@ def check(
       1  violations found (only with --strict) \n
       2  runtime error (bad module path, invalid config, etc.) \n
     """
-    try:
-        app = load_app(app_path)
-    except LoadError as exc:
-        click.echo(f"Error: {exc}", err=True)
-        sys.exit(2)
+    app = _load(app_path)
 
     try:
         config: AsgionConfig = load_config(config_path)
@@ -216,6 +267,7 @@ def check(
                 expanded.add(pattern)
         excluded = expanded
     severity = Severity(min_severity)
+    default_method, headers, body = _prepare_request(method, raw_headers, raw_body)
 
     report = run_check(
         app,
@@ -224,17 +276,24 @@ def check(
         config=config,
         exclude_rules=excluded,
         run_lifespan=not no_lifespan,
+        default_method=default_method,
+        headers=headers,
+        body=body,
     )
 
-    if not quiet:
+    if out is not None:
+        if fmt == "json":
+            file_output = format_json(report, min_severity=severity)
+        else:
+            file_output = format_text(report, min_severity=severity, no_color=True)
+        Path(out).write_text(file_output + "\n")
+
+    if not quiet and out is None:
         if fmt == "json":
             output = format_json(report, min_severity=severity)
         else:
             output = format_text(report, min_severity=severity, no_color=no_color)
-        if out is not None:
-            Path(out).write_text(output + "\n")
-        else:
-            click.echo(output)
+        click.echo(output)
 
     violations = report.filtered(severity)
     if strict and violations:
@@ -285,6 +344,8 @@ def rules(
       asgion rules --format JSON \n
     """
     if rule_id is not None:
+        if layer is not None or sev is not None:
+            click.echo("Warning: --layer/--severity ignored when RULE_ID is specified", err=True)
         rule = RULES.get(rule_id)
         if rule is None:
             click.echo(f"Error: unknown rule: {rule_id}", err=True)
@@ -343,6 +404,26 @@ def rules(
     help="Max response body to record per event (bytes).",
 )
 @click.option("--no-lifespan", is_flag=True, help="Skip lifespan startup/shutdown tracing.")
+@click.option(
+    "--method",
+    default="GET",
+    show_default=True,
+    help="Default HTTP method for paths without a method prefix.",
+)
+@click.option(
+    "-H",
+    "--header",
+    "raw_headers",
+    multiple=True,
+    help="Custom header (repeatable). Format: 'Name: value'.",
+)
+@click.option(
+    "-d",
+    "--body",
+    "raw_body",
+    default=None,
+    help="Request body string (sent as-is in http.request).",
+)
 @click.option("--strict", is_flag=True, help="Exit 1 on any violation found.")
 @click.option("-q", "--quiet", is_flag=True, help="Suppress all output; exit code only.")
 @click.option(
@@ -360,6 +441,9 @@ def trace(
     trace_dir: str | None,
     max_body_size: int,
     no_lifespan: bool,
+    method: str,
+    raw_headers: tuple[str, ...],
+    raw_body: str | None,
     strict: bool,
     quiet: bool,
     min_severity: str,
@@ -375,14 +459,12 @@ def trace(
     Examples:
       asgion trace myapp:app \n
       asgion trace myapp:app --format json \n
-      asgion trace myapp:app --path /api/users --out ./traces/ \n
+      asgion trace myapp:app --path "POST:/api/users" -d '{}' \n
       asgion trace myapp:app --path ws:/ws/chat \n
     """
-    try:
-        app = load_app(app_path)
-    except LoadError as exc:
-        click.echo(f"Error: {exc}", err=True)
-        sys.exit(2)
+    app = _load(app_path)
+
+    default_method, headers, body = _prepare_request(method, raw_headers, raw_body)
 
     records = run_trace(
         app,
@@ -390,6 +472,9 @@ def trace(
         trace_dir=trace_dir,
         max_body_size=max_body_size,
         run_lifespan=not no_lifespan,
+        default_method=default_method,
+        headers=headers,
+        body=body,
     )
 
     severity = Severity(min_severity)
@@ -408,7 +493,16 @@ def trace(
             )
 
     if strict:
-        has_violations = any(r.summary.violations for r in records)
+        from asgion.core._types import SEVERITY_LEVEL
+        from asgion.rules import RULES
+
+        min_level = SEVERITY_LEVEL[severity]
+        has_violations = any(
+            SEVERITY_LEVEL[RULES[v.rule_id].severity] >= min_level
+            for r in records
+            for v in r.summary.violations
+            if v.rule_id in RULES
+        )
         if has_violations:
             sys.exit(1)
 
@@ -445,6 +539,10 @@ def init(pyproject: bool, force: bool) -> None:
       asgion init --force        # overwrite existing .asgion.toml \n
     """
     if pyproject:
+        if force:
+            click.echo(
+                "Warning: --force has no effect with --pyproject (output goes to stdout)", err=True
+            )
         toml_path = Path("pyproject.toml")
         if toml_path.exists():
             import tomllib

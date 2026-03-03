@@ -31,7 +31,11 @@ def lifespan_session() -> tuple[Scope, Receive, Send]:
     return scope, receive, send
 
 
-def ws_session(*, path: str = "/ws") -> tuple[Scope, Receive, Send]:
+def ws_session(
+    *,
+    path: str = "/ws",
+    headers: list[tuple[bytes, bytes]] | None = None,
+) -> tuple[Scope, Receive, Send]:
     scope: Scope = {
         "type": "websocket",
         "asgi": {"version": "3.0"},
@@ -41,7 +45,7 @@ def ws_session(*, path: str = "/ws") -> tuple[Scope, Receive, Send]:
         "raw_path": path.encode(),
         "query_string": b"",
         "root_path": "",
-        "headers": [],
+        "headers": headers or [],
         "subprotocols": [],
     }
     phase = "connect"
@@ -71,7 +75,13 @@ def ws_session(*, path: str = "/ws") -> tuple[Scope, Receive, Send]:
     return scope, receive, send
 
 
-def http_session(*, path: str = "/", method: str = "GET") -> tuple[Scope, Receive, Send]:
+def http_session(
+    *,
+    path: str = "/",
+    method: str = "GET",
+    headers: list[tuple[bytes, bytes]] | None = None,
+    body: bytes = b"",
+) -> tuple[Scope, Receive, Send]:
     scope: Scope = {
         "type": "http",
         "asgi": {"version": "3.0"},
@@ -82,7 +92,7 @@ def http_session(*, path: str = "/", method: str = "GET") -> tuple[Scope, Receiv
         "raw_path": path.encode(),
         "query_string": b"",
         "root_path": "",
-        "headers": [],
+        "headers": headers or [],
     }
     request_sent = False
 
@@ -90,7 +100,7 @@ def http_session(*, path: str = "/", method: str = "GET") -> tuple[Scope, Receiv
         nonlocal request_sent
         if not request_sent:
             request_sent = True
-            return {"type": "http.request", "body": b"", "more_body": False}
+            return {"type": "http.request", "body": body, "more_body": False}
         await asyncio.sleep(999)
         return {"type": "http.disconnect"}
 
