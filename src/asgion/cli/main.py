@@ -31,6 +31,24 @@ from asgion.core.config import (
 )
 from asgion.rules import ALL_RULES, RULES
 
+_LAYERS = [
+    "general",
+    "http",
+    "http.scope",
+    "http.events",
+    "http.fsm",
+    "http.semantic",
+    "http.extension",
+    "ws",
+    "ws.scope",
+    "ws.events",
+    "ws.fsm",
+    "lifespan",
+    "lifespan.scope",
+    "lifespan.events",
+    "lifespan.fsm",
+]
+
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
 @click.version_option(__version__, "-V", "--version", message="asgion %(version)s")
@@ -81,6 +99,13 @@ def cli() -> None:
     help="Minimum severity to report.",
 )
 @click.option("--no-color", is_flag=True, envvar="NO_COLOR", help="Disable ANSI colors.")
+@click.option(
+    "--layer",
+    "layers",
+    multiple=True,
+    type=click.Choice(_LAYERS),
+    help="Only check rules from this layer (repeatable). Prefix match: 'http' includes http.*.",
+)
 @click.option("--no-lifespan", is_flag=True, help="Skip lifespan startup/shutdown checks.")
 @click.option("-q", "--quiet", is_flag=True, help="Suppress all output; exit code only.")
 @click.option(
@@ -114,6 +139,7 @@ def check(
     exclude_rules: str,
     min_severity: str,
     no_color: bool,
+    layers: tuple[str, ...],
     no_lifespan: bool,
     quiet: bool,
     out: str | None,
@@ -166,6 +192,9 @@ def check(
             categories=base.categories,
             exclude_rules=base.exclude_rules | config.exclude_rules,
         )
+
+    if layers:
+        config = dataclasses.replace(config, categories=config.categories | frozenset(layers))
 
     if select:
         cli_include = frozenset(r.strip() for r in select.split(",") if r.strip())
@@ -226,8 +255,8 @@ def check(
 @click.option(
     "--layer",
     default=None,
-    type=click.Choice(["general", "http", "ws", "lifespan"]),
-    help="Show only rules from this layer.",
+    type=click.Choice(_LAYERS),
+    help="Show only rules from this layer. Prefix match: 'http' includes http.*.",
 )
 @click.option(
     "--severity",
