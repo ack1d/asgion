@@ -103,7 +103,7 @@ def cli() -> None:
     "--path",
     "paths",
     multiple=True,
-    default=("/",),
+    default=(),
     help="Paths to check (repeatable).  [default: /]  Prefix: ws:/path, METHOD:/path.",
 )
 @click.option("--strict", is_flag=True, help="Exit 1 on any violation found.")
@@ -277,12 +277,19 @@ def check(
                 expanded.add(pattern)
         excluded = expanded
     severity = Severity(min_severity)
+    if paths:
+        final_paths = paths
+    elif config.paths:
+        final_paths = config.paths
+    else:
+        final_paths = ("/",)
+
     default_method, headers, body = _prepare_request(method, raw_headers, raw_body)
 
     report = run_check(
         app,
         app_path=app_path,
-        paths=paths,
+        paths=final_paths,
         config=config,
         exclude_rules=excluded,
         run_lifespan=not no_lifespan,
@@ -396,7 +403,7 @@ def rules(
     "--path",
     "paths",
     multiple=True,
-    default=("/",),
+    default=(),
     help="Paths to trace (repeatable).  [default: /]  Prefix: ws:/path, METHOD:/path.",
 )
 @click.option(
@@ -491,11 +498,20 @@ def trace(
     """
     app = _load(app_path)
 
+    if paths:
+        final_paths = paths
+    else:
+        try:
+            trace_config = load_config()
+        except ConfigError:
+            trace_config = AsgionConfig()
+        final_paths = trace_config.paths or ("/",)
+
     default_method, headers, body = _prepare_request(method, raw_headers, raw_body)
 
     records = run_trace(
         app,
-        paths=paths,
+        paths=final_paths,
         trace_dir=trace_dir,
         max_body_size=max_body_size,
         run_lifespan=not no_lifespan,
@@ -542,6 +558,9 @@ profile = "recommended"  # "strict" | "recommended" | "minimal"
 # include_rules = []              # allowlist, e.g. ["HF-*", "SEM-001"]
 # exclude_rules = []              # denylist, e.g. ["SEM-006", "SEM-009"]
 # categories = []                 # layer filter, e.g. ["http.fsm", "http.semantic"]
+
+# Paths to check (CLI --path overrides)
+# paths = ["/", "/api/users", "POST:/api/data", "ws:/ws/chat"]
 
 # Semantic thresholds
 # ttfb_threshold = 5.0            # SEM-006: seconds

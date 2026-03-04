@@ -76,6 +76,10 @@ class AsgionConfig:
     - ``"lifespan.scope"``, ``"lifespan.events"``, ``"lifespan.fsm"``
     """
 
+    paths: tuple[str, ...] = ()
+    """Paths to check when run from CLI. Supports protocol prefixes (ws:/path)
+    and method prefixes (POST:/path). CLI --path overrides this. Empty = default "/"."""
+
     # --- SemanticValidator thresholds ---
 
     ttfb_threshold: float = 5.0
@@ -329,5 +333,7 @@ def _parse_config(
         kwargs["exclude_rules"] = frozenset(str(r) for r in rules)
     if isinstance(cats := data.get("categories"), list):
         kwargs["categories"] = frozenset(str(c) for c in cats)
+    if isinstance(paths := data.get("paths"), list):
+        kwargs["paths"] = tuple(str(p) for p in paths)
 
     return dataclasses.replace(base, **kwargs)

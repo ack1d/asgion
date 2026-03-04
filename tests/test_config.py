@@ -731,3 +731,37 @@ def test_load_config_with_user_profile(tmp_path: Path) -> None:
     toml.write_bytes(b'profile = "ci"\n\n[profiles.ci]\nmin_severity = "error"\n')
     cfg = load_config(toml)
     assert cfg.min_severity == Severity.ERROR
+
+
+def test_parse_config_paths() -> None:
+    cfg = _parse_config({"paths": ["/", "/api/users", "POST:/api/data", "ws:/ws/chat"]})
+    assert cfg.paths == ("/", "/api/users", "POST:/api/data", "ws:/ws/chat")
+
+
+def test_parse_config_paths_empty_list() -> None:
+    cfg = _parse_config({"paths": []})
+    assert cfg.paths == ()
+
+
+def test_parse_config_paths_non_list_ignored() -> None:
+    cfg = _parse_config({"paths": "/"})
+    assert cfg.paths == ()
+
+
+def test_parse_config_paths_default_empty() -> None:
+    cfg = AsgionConfig()
+    assert cfg.paths == ()
+
+
+def test_load_config_paths_from_asgion_toml(tmp_path: Path) -> None:
+    toml = tmp_path / ".asgion.toml"
+    toml.write_bytes(b'paths = ["/", "/api/users", "POST:/api/data"]\n')
+    cfg = load_config(toml)
+    assert cfg.paths == ("/", "/api/users", "POST:/api/data")
+
+
+def test_load_config_paths_from_pyproject(tmp_path: Path) -> None:
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_bytes(b'[tool.asgion]\npaths = ["/health", "ws:/ws"]\n')
+    cfg = load_config(pyproject)
+    assert cfg.paths == ("/health", "ws:/ws")

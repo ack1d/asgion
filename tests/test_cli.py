@@ -723,3 +723,57 @@ class TestCLI:
         data = json.loads(result.output)
         assert "total_available" in data
         assert data["total_available"] == len(ALL_RULES)
+
+    def test_check_config_paths_used_when_no_cli_path(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
+        config = tmp_path / ".asgion.toml"
+        config.write_bytes(b'paths = ["/", "/other"]\n')
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "tests._cli_fixtures:good_lifespan_app",
+                "--config",
+                str(config),
+                "--no-lifespan",
+                "--no-color",
+            ],
+        )
+        assert result.exit_code == 0
+        assert "GET /" in result.output
+        assert "GET /other" in result.output
+
+    def test_check_cli_path_overrides_config_paths(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
+        config = tmp_path / ".asgion.toml"
+        config.write_bytes(b'paths = ["/", "/other"]\n')
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "tests._cli_fixtures:good_lifespan_app",
+                "--config",
+                str(config),
+                "--path",
+                "/only-this",
+                "--no-lifespan",
+                "--no-color",
+            ],
+        )
+        assert result.exit_code == 0
+        assert "GET /only-this" in result.output
+        assert "GET /other" not in result.output
+
+    def test_check_no_path_no_config_defaults_to_root(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "tests._cli_fixtures:good_lifespan_app",
+                "--no-lifespan",
+                "--no-color",
+            ],
+        )
+        assert result.exit_code == 0
+        assert "GET /" in result.output
