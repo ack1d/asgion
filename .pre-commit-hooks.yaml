@@ -1,0 +1,8 @@
+- id: asgion
+  name: asgion
+  description: Check ASGI app for protocol violations
+  entry: asgion check
+  language: python
+  types: [python]
+  require_serial: true
+  additional_dependencies: ["asgion[cli]"]
