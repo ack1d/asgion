@@ -6,12 +6,14 @@ import asyncio
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+import click
+
 from asgion.cli._sessions import http_session, lifespan_session, ws_session
 
 if TYPE_CHECKING:
     from asgion.core.inspector import Inspector
 
-_TIMEOUT = 5.0
+DEFAULT_TIMEOUT = 5.0
 
 _WS_PREFIXES = ("ws:", "wss:")
 _HTTP_PREFIXES = ("http:", "https:")
@@ -55,6 +57,7 @@ async def _run_scope(
     *,
     headers: list[tuple[bytes, bytes]] | None = None,
     body: bytes = b"",
+    scope_timeout: float = DEFAULT_TIMEOUT,
 ) -> ScopeRun:
     if scope_type == "lifespan":
         scope, receive, send = lifespan_session()
@@ -72,9 +75,10 @@ async def _run_scope(
         run = ScopeRun(scope_type="http", path=path, method=method)
 
     try:
-        await asyncio.wait_for(inspector(scope, receive, send), timeout=_TIMEOUT)
+        await asyncio.wait_for(inspector(scope, receive, send), timeout=scope_timeout)
     except TimeoutError:
-        pass
+        label = path or scope_type
+        click.echo(f"Warning: {label} timed out after {scope_timeout}s", err=True)
     except Exception as exc:  # noqa: BLE001
         run.error = str(exc)
     return run
@@ -88,13 +92,14 @@ async def drive(
     default_method: str = "GET",
     headers: list[tuple[bytes, bytes]] | None = None,
     body: bytes = b"",
+    scope_timeout: float = DEFAULT_TIMEOUT,
 ) -> list[ScopeRun]:
     """Drive an Inspector through lifespan + paths, return per-scope metadata."""
     runs: list[ScopeRun] = []
 
     if run_lifespan:
         start = len(inspector.violations)
-        run = await _run_scope(inspector, "lifespan", "", "")
+        run = await _run_scope(inspector, "lifespan", "", "", scope_timeout=scope_timeout)
         run.violation_start = start
         runs.append(run)
 
@@ -108,6 +113,7 @@ async def drive(
             method,
             headers=headers,
             body=body,
+            scope_timeout=scope_timeout,
         )
         run.violation_start = start
         runs.append(run)

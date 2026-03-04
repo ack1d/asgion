@@ -5,7 +5,7 @@ import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from asgion.cli._driver import drive
+from asgion.cli._driver import DEFAULT_TIMEOUT, drive
 from asgion.core._types import SEVERITY_LEVEL, Severity
 from asgion.core.inspector import Inspector
 
@@ -52,6 +52,7 @@ def run_check(
     default_method: str = "GET",
     headers: list[tuple[bytes, bytes]] | None = None,
     body: bytes = b"",
+    scope_timeout: float = DEFAULT_TIMEOUT,
 ) -> CheckReport:
     """Run ASGI protocol checks and return a report.
 
@@ -75,6 +76,7 @@ def run_check(
             default_method=default_method,
             headers=headers,
             body=body,
+            scope_timeout=scope_timeout,
         )
         violations = inspector.violations
         for i, run in enumerate(runs):

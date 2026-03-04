@@ -102,7 +102,7 @@ def cli() -> None:
     "paths",
     multiple=True,
     default=("/",),
-    help="Paths to check (repeatable).  [default: /]  Prefix: ws:/path for WebSocket.",
+    help="Paths to check (repeatable).  [default: /]  Prefix: ws:/path, METHOD:/path.",
 )
 @click.option("--strict", is_flag=True, help="Exit 1 on any violation found.")
 @click.option(
@@ -159,6 +159,13 @@ def cli() -> None:
     default=None,
     help="Request body string (sent as-is in http.request).",
 )
+@click.option(
+    "--timeout",
+    default=5.0,
+    show_default=True,
+    type=float,
+    help="Timeout per scope in seconds.",
+)
 @click.option("-q", "--quiet", is_flag=True, help="Suppress all output; exit code only.")
 @click.option(
     "--out",
@@ -196,6 +203,7 @@ def check(
     method: str,
     raw_headers: tuple[str, ...],
     raw_body: str | None,
+    timeout: float,
     quiet: bool,
     out: str | None,
     config_path: str | None,
@@ -279,6 +287,7 @@ def check(
         default_method=default_method,
         headers=headers,
         body=body,
+        scope_timeout=timeout,
     )
 
     if out is not None:
@@ -378,7 +387,7 @@ def rules(
     "paths",
     multiple=True,
     default=("/",),
-    help="Paths to trace (repeatable).  [default: /]  Prefix: ws:/path for WebSocket.",
+    help="Paths to trace (repeatable).  [default: /]  Prefix: ws:/path, METHOD:/path.",
 )
 @click.option(
     "--format",
@@ -424,6 +433,13 @@ def rules(
     default=None,
     help="Request body string (sent as-is in http.request).",
 )
+@click.option(
+    "--timeout",
+    default=5.0,
+    show_default=True,
+    type=float,
+    help="Timeout per scope in seconds.",
+)
 @click.option("--strict", is_flag=True, help="Exit 1 on any violation found.")
 @click.option("-q", "--quiet", is_flag=True, help="Suppress all output; exit code only.")
 @click.option(
@@ -444,6 +460,7 @@ def trace(
     method: str,
     raw_headers: tuple[str, ...],
     raw_body: str | None,
+    timeout: float,
     strict: bool,
     quiet: bool,
     min_severity: str,
@@ -475,6 +492,7 @@ def trace(
         default_method=default_method,
         headers=headers,
         body=body,
+        scope_timeout=timeout,
     )
 
     severity = Severity(min_severity)
@@ -494,7 +512,6 @@ def trace(
 
     if strict:
         from asgion.core._types import SEVERITY_LEVEL
-        from asgion.rules import RULES
 
         min_level = SEVERITY_LEVEL[severity]
         has_violations = any(

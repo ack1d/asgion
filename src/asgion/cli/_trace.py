@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 import click
 
-from asgion.cli._driver import drive
+from asgion.cli._driver import DEFAULT_TIMEOUT, drive
 from asgion.core.inspector import Inspector
 
 if TYPE_CHECKING:
@@ -26,6 +26,7 @@ def run_trace(
     default_method: str = "GET",
     headers: list[tuple[bytes, bytes]] | None = None,
     body: bytes = b"",
+    scope_timeout: float = DEFAULT_TIMEOUT,
 ) -> list[TraceRecord]:
     """Run ASGI app with tracing and return recorded traces."""
     inspector = Inspector(
@@ -43,6 +44,7 @@ def run_trace(
             default_method=default_method,
             headers=headers,
             body=body,
+            scope_timeout=scope_timeout,
         )
         for run in runs:
             if run.error is not None:
