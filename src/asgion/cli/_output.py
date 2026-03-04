@@ -175,6 +175,84 @@ def _summary_line(
     return "  |  ".join(parts)
 
 
+_SARIF_LEVEL: dict[Severity, str] = {
+    Severity.ERROR: "error",
+    Severity.WARNING: "warning",
+    Severity.INFO: "note",
+    Severity.PERF: "note",
+}
+
+
+def format_sarif(
+    report: CheckReport,
+    *,
+    min_severity: Severity = Severity.PERF,
+) -> str:
+    from asgion.rules import RULES
+
+    min_level = SEVERITY_LEVEL[min_severity]
+    results_json: list[dict[str, object]] = []
+    seen_rule_ids: dict[str, Rule] = {}
+
+    for result in report.results:
+        label = _result_label(result)
+        for v in result.violations:
+            if SEVERITY_LEVEL[v.severity] < min_level:
+                continue
+            rule = RULES.get(v.rule_id)
+            if rule is not None:
+                seen_rule_ids[v.rule_id] = rule
+            sarif_result: dict[str, object] = {
+                "ruleId": v.rule_id,
+                "level": _SARIF_LEVEL.get(v.severity, "note"),
+                "message": {"text": v.message},
+                "locations": [
+                    {
+                        "logicalLocation": {
+                            "name": label,
+                            "kind": "scope",
+                        }
+                    }
+                ],
+            }
+            if v.hint:
+                sarif_result["properties"] = {"hint": v.hint}
+            results_json.append(sarif_result)
+
+    rules_json: list[dict[str, object]] = []
+    for rule_id, rule in seen_rule_ids.items():
+        rule_entry: dict[str, object] = {
+            "id": rule_id,
+            "shortDescription": {"text": rule.summary},
+            "defaultConfiguration": {"level": _SARIF_LEVEL.get(rule.severity, "note")},
+        }
+        tags = ["asgi"]
+        if rule.layer:
+            tags.append(rule.layer)
+        tags.extend(sorted(rule.tags))
+        rule_entry["properties"] = {"tags": tags}
+        rules_json.append(rule_entry)
+
+    sarif: dict[str, object] = {
+        "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+        "version": "2.1.0",
+        "runs": [
+            {
+                "tool": {
+                    "driver": {
+                        "name": "asgion",
+                        "version": __version__,
+                        "informationUri": "https://github.com/ack1d/asgion",
+                        "rules": rules_json,
+                    }
+                },
+                "results": results_json,
+            }
+        ],
+    }
+    return json.dumps(sarif, indent=2)
+
+
 def format_json(
     report: CheckReport,
     *,

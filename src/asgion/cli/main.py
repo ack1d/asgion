@@ -15,6 +15,7 @@ from asgion.cli._output import (
     format_rule_detail,
     format_rules_json,
     format_rules_text,
+    format_sarif,
     format_text,
     format_trace_json,
     format_trace_text,
@@ -108,7 +109,7 @@ def cli() -> None:
 @click.option(
     "--format",
     "fmt",
-    type=click.Choice(["text", "json"]),
+    type=click.Choice(["text", "json", "sarif"]),
     default="text",
     show_default=True,
     help="Output format.",
@@ -293,6 +294,8 @@ def check(
     if out is not None:
         if fmt == "json":
             file_output = format_json(report, min_severity=severity)
+        elif fmt == "sarif":
+            file_output = format_sarif(report, min_severity=severity)
         else:
             file_output = format_text(report, min_severity=severity, no_color=True)
         Path(out).write_text(file_output + "\n")
@@ -300,6 +303,8 @@ def check(
     if not quiet and out is None:
         if fmt == "json":
             output = format_json(report, min_severity=severity)
+        elif fmt == "sarif":
+            output = format_sarif(report, min_severity=severity)
         else:
             output = format_text(report, min_severity=severity, no_color=no_color)
         click.echo(output)
