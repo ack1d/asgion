@@ -303,9 +303,7 @@ def format_junit(
     testsuite.set("time", f"{report.elapsed_s:.3f}")
 
     ET.indent(testsuites)
-    return '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(
-        testsuites, encoding="unicode"
-    )
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(testsuites, encoding="unicode")
 
 
 def format_json(

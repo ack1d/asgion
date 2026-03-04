@@ -77,6 +77,7 @@ class ConnectionContext:
     scope_type: str = ""
     path: str = ""
     method: str = ""
+    scope_index: int = 0
 
     violations: list[Violation] = field(default_factory=list)
 
@@ -133,6 +134,7 @@ class ConnectionContext:
             path=self.path,
             method=self.method,
             timestamp=time.monotonic() - self.start_time,
+            scope_index=self.scope_index,
             context=extra or None,
         )
         self.violations.append(v)

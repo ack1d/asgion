@@ -77,9 +77,11 @@ class Inspector:
         _exclude_paths = set(exclude_paths) if exclude_paths else set()
 
         self.violations: list[Violation] = []
+        self._scope_counter: list[int] = [0]
         # Capture the list reference, not self — avoids a reference cycle:
         # inspector → asgi_app(_wrapper) → _collect → inspector
         _violations = self.violations
+        _scope_counter = self._scope_counter
         _user_callback = on_violation
 
         def _collect(v: Violation) -> None:
@@ -101,6 +103,7 @@ class Inspector:
                 collect=_collect,
                 exclude_paths=_exclude_paths,
                 validators_by_type=_validators_by_type,
+                scope_counter=_scope_counter,
                 sample_rate=sample_rate,
                 trace_dir=trace_dir,
                 storage=storage,
@@ -115,7 +118,16 @@ class Inspector:
                 collect=_collect,
                 exclude_paths=_exclude_paths,
                 validators_by_type=_validators_by_type,
+                scope_counter=_scope_counter,
             )
+
+    @property
+    def violations_by_scope(self) -> dict[int, list[Violation]]:
+        """Violations grouped by scope invocation index."""
+        groups: dict[int, list[Violation]] = {}
+        for v in self.violations:
+            groups.setdefault(v.scope_index, []).append(v)
+        return groups
 
     @property
     def traces(self) -> list[TraceRecord]:
@@ -138,6 +150,7 @@ def _build_fast_wrapper(
     collect: ViolationCallback,
     exclude_paths: set[str],
     validators_by_type: _ValidatorMap,
+    scope_counter: list[int] | None = None,
 ) -> ASGIApp:
     """Build the validation-only ASGI wrapper (trace=False path).
 
@@ -155,8 +168,14 @@ def _build_fast_wrapper(
             await app(scope, receive, send)
             return
 
+        idx = 0
+        if scope_counter is not None:
+            idx = scope_counter[0]
+            scope_counter[0] += 1
+
         ctx = ConnectionContext(
             scope,
+            scope_index=idx,
             _rule_allowed=config.allows,
             _on_violation=collect,
         )
@@ -217,6 +236,7 @@ def _build_traced_wrapper(
     collect: ViolationCallback,
     exclude_paths: set[str],
     validators_by_type: _ValidatorMap,
+    scope_counter: list[int] | None = None,
     sample_rate: float,
     trace_dir: str | Path | None,
     storage: TraceStorage | None,
@@ -260,6 +280,7 @@ def _build_traced_wrapper(
         collect=collect,
         exclude_paths=exclude_paths,
         validators_by_type=validators_by_type,
+        scope_counter=scope_counter,
     )
 
     async def _traced(scope: Scope, receive: Receive, send: Send) -> None:
@@ -281,8 +302,14 @@ def _build_traced_wrapper(
             scope, storage=_storage, max_body=_max_body, asgion_version=_version
         )
 
+        idx = 0
+        if scope_counter is not None:
+            idx = scope_counter[0]
+            scope_counter[0] += 1
+
         ctx = ConnectionContext(
             scope,
+            scope_index=idx,
             _rule_allowed=config.allows,
             _on_violation=collect,
         )

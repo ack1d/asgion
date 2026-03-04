@@ -16,6 +16,7 @@ class Violation:
     path: str = ""
     method: str = ""
     timestamp: float = 0.0
+    scope_index: int = 0
     context: dict[str, Any] | None = None
 
 

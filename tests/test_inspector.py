@@ -192,6 +192,66 @@ async def test_inspector_strict_raises() -> None:
         await inspector(scope, receive, send)
 
 
+async def test_violations_have_scope_index() -> None:
+    """Each violation carries the scope_index of its connection."""
+
+    async def bad_app(scope, receive, send):
+        await receive()
+        await send({"type": "http.response.start", "status": "bad", "headers": []})
+        await send({"type": "http.response.body", "body": b"", "more_body": False})
+
+    inspector = Inspector(bad_app)
+    await _run_http(inspector)
+    await _run_http(inspector)
+
+    assert len(inspector.violations) > 0
+    # First connection -> scope_index 0, second -> scope_index 1
+    assert all(v.scope_index == 0 for v in inspector.violations if v.scope_index == 0)
+    assert any(v.scope_index == 0 for v in inspector.violations)
+    assert any(v.scope_index == 1 for v in inspector.violations)
+
+
+async def test_violations_by_scope() -> None:
+    """violations_by_scope groups violations by connection."""
+
+    async def bad_app(scope, receive, send):
+        await receive()
+        await send({"type": "http.response.start", "status": "bad", "headers": []})
+        await send({"type": "http.response.body", "body": b"", "more_body": False})
+
+    inspector = Inspector(bad_app)
+    await _run_http(inspector)
+    await _run_http(inspector)
+
+    by_scope = inspector.violations_by_scope
+    assert 0 in by_scope
+    assert 1 in by_scope
+    # Each scope should have violations
+    assert len(by_scope[0]) > 0
+    assert len(by_scope[1]) > 0
+    # Total should match
+    assert sum(len(vs) for vs in by_scope.values()) == len(inspector.violations)
+
+
+async def test_violations_by_scope_empty() -> None:
+    """violations_by_scope returns empty dict when no violations."""
+
+    async def good_app(scope, receive, send):
+        await receive()
+        await send(
+            {
+                "type": "http.response.start",
+                "status": 200,
+                "headers": [(b"content-type", b"text/plain; charset=utf-8")],
+            }
+        )
+        await send({"type": "http.response.body", "body": b"OK", "more_body": False})
+
+    inspector = Inspector(good_app)
+    await _run_http(inspector)
+    assert inspector.violations_by_scope == {}
+
+
 async def test_inspect_function_still_works() -> None:
     """inspect() returns a plain ASGI callable; backward compatible."""
     from asgion import inspect
