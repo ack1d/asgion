@@ -4,6 +4,7 @@ import base64
 import binascii
 import json
 import os
+import xml.etree.ElementTree as ET
 from typing import TYPE_CHECKING
 
 from asgion import __version__
@@ -251,6 +252,60 @@ def format_sarif(
         ],
     }
     return json.dumps(sarif, indent=2)
+
+
+def format_junit(
+    report: CheckReport,
+    *,
+    min_severity: Severity = Severity.PERF,
+) -> str:
+    min_level = SEVERITY_LEVEL[min_severity]
+
+    testsuites = ET.Element("testsuites")
+    testsuite = ET.SubElement(testsuites, "testsuite")
+    testsuite.set("name", "asgion")
+    testsuite.set("timestamp", "")
+
+    total_tests = 0
+    total_failures = 0
+    total_errors = 0
+
+    for result in report.results:
+        label = _result_label(result)
+        tc = ET.SubElement(testsuite, "testcase")
+        tc.set("name", label)
+        tc.set("classname", report.app_path)
+        total_tests += 1
+
+        if result.error:
+            total_errors += 1
+            err = ET.SubElement(tc, "error")
+            err.set("message", result.error)
+            continue
+
+        filtered = [v for v in result.violations if SEVERITY_LEVEL[v.severity] >= min_level]
+        if filtered:
+            total_failures += 1
+            lines: list[str] = []
+            for v in filtered:
+                line = f"[{v.rule_id}] {v.severity}: {v.message}"
+                if v.hint:
+                    line += f"\n  hint: {v.hint}"
+                lines.append(line)
+            failure = ET.SubElement(tc, "failure")
+            failure.set("message", f"{len(filtered)} violation(s)")
+            failure.set("type", "violation")
+            failure.text = "\n\n".join(lines)
+
+    testsuite.set("tests", str(total_tests))
+    testsuite.set("failures", str(total_failures))
+    testsuite.set("errors", str(total_errors))
+    testsuite.set("time", f"{report.elapsed_s:.3f}")
+
+    ET.indent(testsuites)
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(
+        testsuites, encoding="unicode"
+    )
 
 
 def format_json(
