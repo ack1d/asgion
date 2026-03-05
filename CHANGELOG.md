@@ -4,6 +4,44 @@
 
 - ...
 
+## 0.6.0 (2026-03-06)
+
+### Features
+
+- `check` and `trace`: `-q`/`--quiet` — suppress stdout, exit code only.
+- `check`: `--select` — rule allowlist with glob support (e.g. `--select "HF-*,SEM-001"`).
+- `check`: `--layer` filter (repeatable) with granular values (`http.fsm`, `http.semantic`, etc.).
+- `check`: `--out FILE` — write output to file (strips ANSI, works with `--quiet`).
+- `check` and `trace`: `--method`, `-H`/`--header`, `-d`/`--body` for custom HTTP requests. Method prefix per path: `--path "POST:/api/users"`.
+- `check` and `trace`: `--timeout` (default 5.0s) — configurable per-scope timeout.
+- `trace`: `--strict` — exit 1 on violations, respects `--min-severity`.
+- `check`: wall time in summary footer (e.g. `No violations found.  |  0.12s`).
+- `check`: `--format sarif` — SARIF v2.1.0 output (GitHub Code Scanning, VS Code SARIF Viewer).
+- `check`: `--format junit` — JUnit XML output (Jenkins, GitLab CI, Azure DevOps).
+- `asgion init` — generate `.asgion.toml` with commented-out defaults. `--pyproject` prints `[tool.asgion]` block.
+- `rules`: `--layer` accepts granular values (`http.scope`, `ws.fsm`, etc.) in addition to top-level prefixes.
+- Config `paths`: define paths to check in config file. CLI `--path` overrides.
+- `Rule`: new fields `tags`, `deprecated`.
+- `ConnectionContext.extra`: per-connection `dict` for plugin/validator state.
+- `Violation.scope_index` — violation carries its scope invocation index. `Inspector.violations_by_scope` groups by connection.
+- Public API: re-export `deserialize`, `TraceViolation`, `TraceFormatError`, `TraceEnvironment`.
+- **GitHub Action** (`uses: ack1d/asgion@v0`) — reusable composite action for CI.
+- **pre-commit hook** (`.pre-commit-hooks.yaml`) — use `asgion` as a [pre-commit](https://pre-commit.com) hook.
+
+### Fixes
+
+- `--exclude-rules` and `--select`: warning on unknown rule IDs and glob patterns matching no rules.
+- `rules RULE_ID --layer/--severity` now warns that filters are ignored when a specific rule is requested.
+
+### Internal
+
+- Exit code docstrings added to `trace`, `init`, `rules` `--help` output.
+- Hint quality audit: added/improved 21 rule hints for actionable user guidance.
+- Unified CLI driver: `check` and `trace` share a single `drive()` loop with per-scope violation boundaries, eliminating duplicated ASGI driving logic.
+- CLI: extracted `_load()` and `_prepare_request()` helpers, removing boilerplate duplication between `check` and `trace`.
+- Removed dead code: old WF-008 ("send after websocket.close") was unreachable — fully covered by WF-005. Rules WF-009..WF-012 renumbered to WF-008..WF-011.
+- Removed unused `assert_violations()` test helper from `conftest.py`.
+
 ## 0.5.1 (2026-02-26)
 
 ### Features

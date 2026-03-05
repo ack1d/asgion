@@ -22,7 +22,7 @@ Frameworks catch some of this. asgion validates the full ASGI contract — state
 
 ## Highlights
 
-- **Full ASGI contract validation** — 164 rules across HTTP, WebSocket, and Lifespan
+- **Full ASGI contract validation** — 163 rules across HTTP, WebSocket, and Lifespan
 - **Trace engine** — record every `receive()`/`send()` with nanosecond timestamps and inline violation markers
 - **CI-ready** — deterministic exit codes and JSON output
 - **CLI, Python API, pytest plugin** — fits any workflow
@@ -65,7 +65,7 @@ CHECK  myapp:app
   [SEM-002] info: No Content-Type header on 2xx response
     hint: Responses with a body should include a Content-Type header
 
-2 violations (1 error, 1 info)
+2 violations (1 error, 1 info)  |  709µs
 ```
 
 What is `HF-002`? **Look up** any rule directly:
@@ -90,11 +90,11 @@ asgion trace myapp:app
 ```
 
 ```
-TRACE  GET / (0.063ms, TTFB 0.035ms)
+TRACE  GET / (88µs, TTFB 54µs)
 
-     0.016ms  send     http.response.body  4 bytes  ← HF-002 (error)
-     0.035ms  send     http.response.start  200  (+0.019ms)  ← SEM-002 (info)
-     0.052ms  send     http.response.body  5 bytes  (+0.016ms)
+        26µs  send     http.response.body  4 bytes  ← HF-002 (error)
+        54µs  send     http.response.start  200  (+28µs)  ← SEM-002 (info)
+        75µs  send     http.response.body  5 bytes  (+21µs)
 
   Events: 3  |  Violations: 2 (1 error, 1 info)
 ```
@@ -104,9 +104,26 @@ asgion trace myapp:app --min-severity error   # only error-level markers
 asgion trace myapp:app --out ./traces/        # save as JSON files
 ```
 
-Exit codes: 0 = clean, 1 = violations (`--strict`), 2 = runtime error. See `asgion check --help`.
+**Filter, export, target specific endpoints:**
 
-See the [full rule list](docs/rules.md) for all available rules and their descriptions.
+```bash
+asgion check myapp:app --select "HF-*" --min-severity warning
+asgion check myapp:app --path /api/users --path "POST:/api/users" -H "Content-Type: application/json"
+asgion check myapp:app --format sarif --out report.sarif   # GitHub Code Scanning
+asgion check myapp:app --format junit --out report.xml     # Jenkins / GitLab CI
+```
+
+**Bootstrap a config file:**
+
+```bash
+asgion init              # creates .asgion.toml with commented-out defaults
+asgion init --pyproject  # prints [tool.asgion] block to stdout
+```
+
+Exit codes: 0 = clean, 1 = violations (`--strict`), 2 = runtime error. See `asgion check --help`.
+App exceptions and timeouts are reported but do not affect exit codes — only protocol violations do.
+
+See the [full rule list](docs/rules.md) for all 163 rules and their descriptions.
 
 ## Python API
 
@@ -157,6 +174,38 @@ async def test_my_app(asgi_inspect):
 
 ```bash
 pytest --asgi-strict   # auto-check all tests
+```
+
+## CI Integration
+
+### GitHub Action
+
+```yaml
+# .github/workflows/asgion.yml
+name: ASGI Check
+on: [push, pull_request]
+jobs:
+  asgion:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ack1d/asgion@v0
+        with:
+          app: myapp:app
+          strict: true
+          format: sarif
+```
+
+### pre-commit
+
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/ack1d/asgion
+    rev: v0.6.0  # update with: pre-commit autoupdate
+    hooks:
+      - id: asgion
+        args: [myapp:app, --strict]
 ```
 
 ## Configuration

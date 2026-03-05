@@ -40,6 +40,9 @@ min_severity = "perf"
 # Rule denylist — suppress specific rules (supports globs)
 # exclude_rules = ["SEM-006", "SEM-009"]
 
+# Paths to check (CLI --path overrides this)
+# paths = ["/", "/api/users", "POST:/api/users", "ws:/ws/chat"]
+
 # Layer filter — only check these categories (prefix matching)
 # categories = ["http.fsm", "ws.fsm"]
 
