@@ -24,6 +24,7 @@ SEM_003 = Rule(
     "SEM-003",
     Severity.WARNING,
     "Content-Length does not match actual body size",
+    hint="Verify Content-Length matches the total bytes sent in response body",
     layer=_LAYER,
     scope_types=_SCOPES,
 )

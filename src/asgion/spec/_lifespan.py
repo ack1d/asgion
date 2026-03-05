@@ -35,8 +35,10 @@ LIFESPAN_SPEC = ProtocolSpec(
     ),
     invalid_receive_rule_id="LE-001",
     invalid_receive_summary="Invalid lifespan receive event type",
+    invalid_receive_hint="Expected 'lifespan.startup' or 'lifespan.shutdown'",
     invalid_send_rule_id="LE-002",
     invalid_send_summary="Invalid lifespan send event type",
+    invalid_send_hint="Expected 'lifespan.startup.complete', 'lifespan.startup.failed', 'lifespan.shutdown.complete', or 'lifespan.shutdown.failed'",
     events=(
         EventSpec("lifespan.startup", "receive"),
         EventSpec("lifespan.shutdown", "receive"),

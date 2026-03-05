@@ -54,6 +54,7 @@ G_011 = Rule(
     "G-011",
     Severity.ERROR,
     "Scope must contain 'asgi' dict with version info",
+    hint="Add scope[\"asgi\"] = {\"version\": \"3.0\"}",
     layer=_LAYER,
     scope_types=_SCOPES,
 )
@@ -75,6 +76,7 @@ G_014 = Rule(
     "G-014",
     Severity.WARNING,
     "Message nesting exceeds maximum depth",
+    hint="Reduce nesting in message values; maximum depth is 32",
     layer=_LAYER,
     scope_types=_SCOPES,
 )

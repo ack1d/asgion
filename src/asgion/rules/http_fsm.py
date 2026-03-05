@@ -80,7 +80,7 @@ HF_010 = Rule(
     "HF-010",
     Severity.INFO,
     "Streaming response body (more_body=True)",
-    hint="Application is sending chunked response body",
+    hint="Consider combining small chunks to reduce overhead",
     layer=_LAYER,
     scope_types=_SCOPES,
 )

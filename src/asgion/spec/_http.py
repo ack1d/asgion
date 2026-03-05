@@ -114,6 +114,7 @@ HTTP_SPEC = ProtocolSpec(
             "HS-007",
             severity=Severity.WARNING,
             summary="HTTP method should be uppercase",
+            hint="ASGI servers expect uppercase methods like GET, POST, PUT",
         ),
         FieldRequired("scheme", "HS-008"),
         FieldType("scheme", str, "HS-009"),
@@ -133,6 +134,7 @@ HTTP_SPEC = ProtocolSpec(
             "HS-013",
             severity=Severity.WARNING,
             summary="HTTP path should start with '/'",
+            hint="Paths must be absolute, starting with '/'",
         ),
         FieldRequired("raw_path", "HS-014"),
         FieldType("raw_path", bytes, "HS-015"),
@@ -186,6 +188,7 @@ HTTP_SPEC = ProtocolSpec(
     invalid_receive_hint="Expected 'http.request' or 'http.disconnect'",
     invalid_send_rule_id="HE-014",
     invalid_send_summary="Invalid HTTP send event type",
+    invalid_send_hint="Expected 'http.response.start', 'http.response.body', or an extension event type",
     events=(
         EventSpec(
             "http.request",

@@ -37,10 +37,10 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 | `G-008` | error | NaN value in message | ASGI spec forbids NaN in messages |
 | `G-009` | error | Infinity value in message | ASGI spec forbids Infinity in messages |
 | `G-010` | error | Forbidden type in message | ASGI messages may only contain: bytes, str, int, float, list, dict, bool, None |
-| `G-011` | error | Scope must contain 'asgi' dict with version info | - |
+| `G-011` | error | Scope must contain 'asgi' dict with version info | Add scope["asgi"] = {"version": "3.0"} |
 | `G-012` | error | asgi['version'] must be '2.0' or '3.0' | - |
 | `G-013` | warning | asgi['spec_version'] should be a str | - |
-| `G-014` | warning | Message nesting exceeds maximum depth | - |
+| `G-014` | warning | Message nesting exceeds maximum depth | Reduce nesting in message values; maximum depth is 32 |
 
 ## HTTP Scope Fields (Layer 1)
 > Spec: <https://asgi.readthedocs.io/en/latest/specs/www.html>
@@ -53,13 +53,13 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 | `HS-004` | warning | Unknown HTTP version in scope | Expected one of: 1.0, 1.1, 2, 3 |
 | `HS-005` | error | scope missing 'method' field | - |
 | `HS-006` | error | scope['method'] must be str | - |
-| `HS-007` | warning | HTTP method should be uppercase | - |
+| `HS-007` | warning | HTTP method should be uppercase | ASGI servers expect uppercase methods like GET, POST, PUT |
 | `HS-008` | error | scope missing 'scheme' field | - |
 | `HS-009` | error | scope['scheme'] must be str | - |
 | `HS-010` | warning | Unknown HTTP scheme | Expected 'http' or 'https' |
 | `HS-011` | error | scope missing 'path' field | - |
 | `HS-012` | error | scope['path'] must be str | - |
-| `HS-013` | warning | HTTP path should start with '/' | - |
+| `HS-013` | warning | HTTP path should start with '/' | Paths must be absolute, starting with '/' |
 | `HS-014` | error | scope missing 'raw_path' field | - |
 | `HS-015` | error | scope['raw_path'] must be bytes | - |
 | `HS-016` | error | scope missing 'query_string' field | - |
@@ -135,7 +135,7 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 | `HE-011` | warning | http.response.start['trailers'] should be bool | - |
 | `HE-012` | error | http.response.body['body'] must be bytes | - |
 | `HE-013` | warning | http.response.body['more_body'] should be bool | - |
-| `HE-014` | error | Invalid HTTP send event type | Expected one of: http.response.body, http.response.debug, http.response.early_hint, http.response.pathsend, http.response.push, http.response.start, http.response.trailers, http.response.zerocopysend |
+| `HE-014` | error | Invalid HTTP send event type | Expected 'http.response.start', 'http.response.body', or an extension event type |
 | `HE-015` | error | http.response.trailers headers format invalid | - |
 | `HE-016` | error | http.response.push missing 'path' field | - |
 | `HE-017` | error | http.response.push['path'] must be str | - |
@@ -160,7 +160,7 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 | `HF-007` | info | Received http.request after body was already complete | After more_body=False, further receives return http.disconnect |
 | `HF-008` | error | trailers=True in response.start but no http.response.trailers sent | Send http.response.trailers after the final response body |
 | `HF-009` | error | Trailers sent without trailers=True in response.start | Set trailers=True in http.response.start to use trailer headers |
-| `HF-010` | info | Streaming response body (more_body=True) | Application is sending chunked response body |
+| `HF-010` | info | Streaming response body (more_body=True) | Consider combining small chunks to reduce overhead |
 | `HF-011` | info | HEAD request response has non-empty body | ASGI servers strip body for HEAD; consider doing it in the app for clarity |
 | `HF-012` | warning | Response has body when status code forbids it | 1xx/204/304 responses must not include a body |
 
@@ -176,7 +176,7 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 | `WE-005` | warning | websocket.disconnect['reason'] should be str or None | - |
 | `WE-006` | warning | websocket.accept['subprotocol'] should be str or None | - |
 | `WE-007` | error | websocket.accept headers format invalid | - |
-| `WE-008` | error | websocket.send must have exactly one of 'bytes' or 'text' as non-None | - |
+| `WE-008` | error | websocket.send must have exactly one of 'bytes' or 'text' as non-None | Set one to a value and the other to None |
 | `WE-009` | error | websocket.send['bytes'] must be None or bytes | - |
 | `WE-010` | error | websocket.send['text'] must be None or str | - |
 | `WE-011` | error | websocket.close['code'] must be int | - |
@@ -196,7 +196,7 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 | `WF-003` | error | websocket.send before websocket.accept | Accept the WebSocket connection before sending data |
 | `WF-004` | error | websocket.send after websocket.close was sent | Cannot send data after closing the connection |
 | `WF-005` | error | Send/close after websocket.disconnect | Client has disconnected, cannot send data |
-| `WF-006` | error | Duplicate websocket.accept | - |
+| `WF-006` | error | Duplicate websocket.accept | Guard accept with a flag or state check to avoid re-sending |
 | `WF-007` | info | websocket.close sent before accept - will result in HTTP 403 | This is valid for rejecting connections |
 | `WF-008` | error | websocket.http.response.start sent in wrong state | HTTP denial response can only be sent before accepting |
 | `WF-009` | error | websocket.http.response.body without preceding http.response.start | - |
@@ -208,8 +208,8 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 
 | ID | Severity | Summary | Hint |
 |----|----------|---------|------|
-| `LE-001` | error | Invalid lifespan receive event type | Expected one of: lifespan.shutdown, lifespan.startup |
-| `LE-002` | error | Invalid lifespan send event type | Expected one of: lifespan.shutdown.complete, lifespan.shutdown.failed, lifespan.startup.complete, lifespan.startup.failed |
+| `LE-001` | error | Invalid lifespan receive event type | Expected 'lifespan.startup' or 'lifespan.shutdown' |
+| `LE-002` | error | Invalid lifespan send event type | Expected 'lifespan.startup.complete', 'lifespan.startup.failed', 'lifespan.shutdown.complete', or 'lifespan.shutdown.failed' |
 | `LE-003` | error | lifespan.startup.failed['message'] must be str | - |
 | `LE-004` | error | lifespan.shutdown.failed['message'] must be str | - |
 
@@ -225,7 +225,7 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 | `LF-005` | error | lifespan.shutdown received before startup.complete | Shutdown should only occur after successful startup |
 | `LF-006` | error | lifespan.shutdown.complete/failed sent in wrong state | - |
 | `LF-007` | error | shutdown.complete and shutdown.failed are mutually exclusive | - |
-| `LF-008` | info | App exited during shutdown without sending complete/failed | - |
+| `LF-008` | info | App exited during shutdown without sending complete/failed | Send lifespan.shutdown.complete or lifespan.shutdown.failed before returning |
 | `LF-009` | warning | App exited during startup without sending startup.complete or startup.failed | An exception during startup is not the same as startup.failed — send the proper signal |
 | `LF-010` | info | Lifespan state dict is available for sharing state with requests | state is mutable in lifespan scope and shallow-copied to request scopes |
 
@@ -243,7 +243,7 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 |----|----------|---------|------|
 | `SEM-001` | warning | Duplicate Content-Type header in response | Only one Content-Type header should be sent |
 | `SEM-002` | info | No Content-Type header on 2xx response | Responses with a body should include a Content-Type header |
-| `SEM-003` | warning | Content-Length does not match actual body size | - |
+| `SEM-003` | warning | Content-Length does not match actual body size | Verify Content-Length matches the total bytes sent in response body |
 | `SEM-004` | warning | Set-Cookie without Secure flag on http:// scheme | Cookies on plaintext HTTP can be intercepted |
 | `SEM-005` | info | App completed without receiving http.disconnect | Long-running handlers should listen for http.disconnect to detect client drops |
 | `SEM-006` | perf | Slow time to first byte | Response started more than 5s after receiving the request |

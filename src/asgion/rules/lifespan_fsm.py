@@ -59,6 +59,7 @@ LF_008 = Rule(
     "LF-008",
     Severity.INFO,
     "App exited during shutdown without sending complete/failed",
+    hint="Send lifespan.shutdown.complete or lifespan.shutdown.failed before returning",
     layer=_LAYER,
     scope_types=_SCOPES,
 )

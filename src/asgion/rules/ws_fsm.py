@@ -48,6 +48,7 @@ WF_006 = Rule(
     "WF-006",
     Severity.ERROR,
     "Duplicate websocket.accept",
+    hint="Guard accept with a flag or state check to avoid re-sending",
     layer=_LAYER,
     scope_types=_SCOPES,
 )
