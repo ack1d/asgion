@@ -151,61 +151,61 @@ def test_wf007_close_after_accept_no_info(validator: WebSocketFSMValidator) -> N
     assert_no_violation(ctx, "WF-007")
 
 
-def test_wf008_send_in_closing_state(validator: WebSocketFSMValidator) -> None:
+def test_wf004_send_in_closing_state(validator: WebSocketFSMValidator) -> None:
     ctx = _drive_to_closing(validator)
     validator.validate_send(ctx, {"type": "websocket.send", "bytes": None, "text": "late msg"})
     assert_violation(ctx, "WF-004")
 
 
-def test_wf009_denial_start_after_accept(validator: WebSocketFSMValidator) -> None:
+def test_wf008_denial_start_after_accept(validator: WebSocketFSMValidator) -> None:
     ctx = _drive_to_connected(validator)
     validator.validate_send(
         ctx,
         {"type": "websocket.http.response.start", "status": 403, "headers": []},
     )
-    assert_violation(ctx, "WF-009")
+    assert_violation(ctx, "WF-008")
 
 
-def test_wf009_denial_start_in_connecting(validator: WebSocketFSMValidator) -> None:
+def test_wf008_denial_start_in_connecting(validator: WebSocketFSMValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_send(
         ctx,
         {"type": "websocket.http.response.start", "status": 403, "headers": []},
     )
-    assert_violation(ctx, "WF-009")
+    assert_violation(ctx, "WF-008")
 
 
-def test_wf009_denial_start_in_handshake_passes(validator: WebSocketFSMValidator) -> None:
+def test_wf008_denial_start_in_handshake_passes(validator: WebSocketFSMValidator) -> None:
     ctx = _drive_to_handshake(validator)
     validator.validate_send(
         ctx,
         {"type": "websocket.http.response.start", "status": 403, "headers": []},
     )
-    assert_no_violation(ctx, "WF-009")
+    assert_no_violation(ctx, "WF-008")
     assert ctx.ws is not None
     assert ctx.ws.denial_started is True
     assert ctx.ws.phase == WSPhase.CLOSING
 
 
-def test_wf010_denial_body_without_start(validator: WebSocketFSMValidator) -> None:
+def test_wf009_denial_body_without_start(validator: WebSocketFSMValidator) -> None:
     ctx = _drive_to_handshake(validator)
     validator.validate_send(
         ctx,
         {"type": "websocket.http.response.body", "body": b"Forbidden"},
     )
-    assert_violation(ctx, "WF-010")
+    assert_violation(ctx, "WF-009")
 
 
-def test_wf010_denial_body_without_start_connecting(validator: WebSocketFSMValidator) -> None:
+def test_wf009_denial_body_without_start_connecting(validator: WebSocketFSMValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_send(
         ctx,
         {"type": "websocket.http.response.body", "body": b"x"},
     )
-    assert_violation(ctx, "WF-010")
+    assert_violation(ctx, "WF-009")
 
 
-def test_wf010_denial_body_after_start_passes(validator: WebSocketFSMValidator) -> None:
+def test_wf009_denial_body_after_start_passes(validator: WebSocketFSMValidator) -> None:
     ctx = _drive_to_handshake(validator)
     validator.validate_send(
         ctx,
@@ -215,10 +215,10 @@ def test_wf010_denial_body_after_start_passes(validator: WebSocketFSMValidator) 
         ctx,
         {"type": "websocket.http.response.body", "body": b"Forbidden", "more_body": False},
     )
-    assert_no_violation(ctx, "WF-010")
+    assert_no_violation(ctx, "WF-009")
 
 
-def test_wf010_denial_body_closes_connection(validator: WebSocketFSMValidator) -> None:
+def test_wf009_denial_body_closes_connection(validator: WebSocketFSMValidator) -> None:
     ctx = _drive_to_handshake(validator)
     validator.validate_send(
         ctx,
@@ -232,7 +232,7 @@ def test_wf010_denial_body_closes_connection(validator: WebSocketFSMValidator) -
     assert ctx.ws.phase == WSPhase.CLOSED
 
 
-def test_wf010_denial_body_more_body_true_stays_closing(
+def test_wf009_denial_body_more_body_true_stays_closing(
     validator: WebSocketFSMValidator,
 ) -> None:
     ctx = _drive_to_handshake(validator)
@@ -248,14 +248,14 @@ def test_wf010_denial_body_more_body_true_stays_closing(
     assert ctx.ws.phase == WSPhase.CLOSING
 
 
-def test_wf012_receive_after_disconnect(validator: WebSocketFSMValidator) -> None:
+def test_wf011_receive_after_disconnect(validator: WebSocketFSMValidator) -> None:
     ctx = _drive_to_closed_via_disconnect(validator)
     validator.validate_receive(ctx, {"type": "websocket.receive", "bytes": b"stale", "text": None})
-    v = assert_violation(ctx, "WF-012")
+    v = assert_violation(ctx, "WF-011")
     assert v.severity == "warning"
 
 
-def test_wf012_receive_after_denial_closed(validator: WebSocketFSMValidator) -> None:
+def test_wf011_receive_after_denial_closed(validator: WebSocketFSMValidator) -> None:
     ctx = _drive_to_handshake(validator)
     validator.validate_send(
         ctx,
@@ -268,13 +268,13 @@ def test_wf012_receive_after_denial_closed(validator: WebSocketFSMValidator) -> 
     assert ctx.ws is not None
     assert ctx.ws.phase == WSPhase.CLOSED
     validator.validate_receive(ctx, {"type": "websocket.receive", "bytes": None, "text": "late"})
-    assert_violation(ctx, "WF-012")
+    assert_violation(ctx, "WF-011")
 
 
-def test_wf012_receive_while_connected_passes(validator: WebSocketFSMValidator) -> None:
+def test_wf011_receive_while_connected_passes(validator: WebSocketFSMValidator) -> None:
     ctx = _drive_to_connected(validator)
     validator.validate_receive(ctx, {"type": "websocket.receive", "bytes": b"data", "text": None})
-    assert_no_violation(ctx, "WF-012")
+    assert_no_violation(ctx, "WF-011")
 
 
 def test_full_lifecycle_no_violations(validator: WebSocketFSMValidator) -> None:
@@ -314,20 +314,20 @@ def test_denial_lifecycle_no_violations(validator: WebSocketFSMValidator) -> Non
     assert ctx.ws.phase == WSPhase.CLOSED
 
 
-def test_wf011_send_after_denial_start(validator: WebSocketFSMValidator) -> None:
+def test_wf010_send_after_denial_start(validator: WebSocketFSMValidator) -> None:
     ctx = _drive_to_handshake(validator)
     validator.validate_send(
         ctx, {"type": "websocket.http.response.start", "status": 403, "headers": []}
     )
     validator.validate_send(ctx, {"type": "websocket.send", "text": "hello"})
-    v = assert_violation(ctx, "WF-011")
+    v = assert_violation(ctx, "WF-010")
     assert v.severity == "error"
 
 
-def test_wf011_send_before_denial_passes(validator: WebSocketFSMValidator) -> None:
+def test_wf010_send_before_denial_passes(validator: WebSocketFSMValidator) -> None:
     ctx = _drive_to_connected(validator)
     validator.validate_send(ctx, {"type": "websocket.send", "text": "hello"})
-    assert_no_violation(ctx, "WF-011")
+    assert_no_violation(ctx, "WF-010")
 
 
 def test_state_transitions_connecting_to_handshake(

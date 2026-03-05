@@ -61,13 +61,6 @@ def assert_violation(ctx: ConnectionContext, rule_id: str) -> Violation:
     return matching[0]
 
 
-def assert_violations(ctx: ConnectionContext, *rule_ids: str) -> list[Violation]:
-    found_ids = {v.rule_id for v in ctx.violations}
-    expected = set(rule_ids)
-    missing = expected - found_ids
-    assert not missing, f"Missing violations: {missing}. Got: {found_ids}"
-    return [v for v in ctx.violations if v.rule_id in expected]
-
 
 def make_asgi_scope(scope_type: str = "http") -> dict:
     """Return a minimal valid ASGI scope dict for driving apps end-to-end."""

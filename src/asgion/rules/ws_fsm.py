@@ -62,35 +62,28 @@ WF_007 = Rule(
 WF_008 = Rule(
     "WF-008",
     Severity.ERROR,
-    "send() called after websocket.close",
+    "websocket.http.response.start sent in wrong state",
+    hint="HTTP denial response can only be sent before accepting",
     layer=_LAYER,
     scope_types=_SCOPES,
 )
 WF_009 = Rule(
     "WF-009",
     Severity.ERROR,
-    "websocket.http.response.start sent in wrong state",
-    hint="HTTP denial response can only be sent before accepting",
+    "websocket.http.response.body without preceding http.response.start",
     layer=_LAYER,
     scope_types=_SCOPES,
 )
 WF_010 = Rule(
     "WF-010",
     Severity.ERROR,
-    "websocket.http.response.body without preceding http.response.start",
-    layer=_LAYER,
-    scope_types=_SCOPES,
-)
-WF_011 = Rule(
-    "WF-011",
-    Severity.ERROR,
     "websocket.send after HTTP denial response started",
     hint="Cannot send WebSocket data during HTTP denial flow",
     layer=_LAYER,
     scope_types=_SCOPES,
 )
-WF_012 = Rule(
-    "WF-012",
+WF_011 = Rule(
+    "WF-011",
     Severity.WARNING,
     "websocket.receive after connection closed",
     layer=_LAYER,

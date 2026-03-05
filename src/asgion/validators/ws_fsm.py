@@ -12,7 +12,6 @@ from asgion.rules.ws_fsm import (
     WF_009,
     WF_010,
     WF_011,
-    WF_012,
 )
 from asgion.validators.base import BaseValidator
 
@@ -31,7 +30,7 @@ class WebSocketFSMValidator(BaseValidator):
 
         elif msg_type == "websocket.receive":
             if ctx.ws.closed:
-                ctx.violation(WF_012)
+                ctx.violation(WF_011)
 
         elif msg_type == "websocket.disconnect":
             ctx.ws.phase = WSPhase.CLOSED
@@ -68,7 +67,7 @@ class WebSocketFSMValidator(BaseValidator):
         assert ctx.ws is not None
 
         if ctx.ws.denial_started:
-            ctx.violation(WF_011)
+            ctx.violation(WF_010)
             return
 
         if not ctx.ws.accepted:
@@ -82,9 +81,6 @@ class WebSocketFSMValidator(BaseValidator):
         if ctx.ws.closed:
             ctx.violation(WF_005)
             return
-
-        if ctx.ws.phase == WSPhase.CLOSED:
-            ctx.violation(WF_008)
 
     def _validate_close(self, ctx: ConnectionContext) -> None:
         assert ctx.ws is not None
@@ -103,13 +99,13 @@ class WebSocketFSMValidator(BaseValidator):
 
         if ctx.ws.accepted:
             ctx.violation(
-                WF_009,
+                WF_008,
                 "websocket.http.response.start sent after websocket.accept",
             )
             return
 
         if ctx.ws.phase != WSPhase.HANDSHAKE:
-            ctx.violation(WF_009, state=ctx.ws.phase)
+            ctx.violation(WF_008, state=ctx.ws.phase)
             return
 
         ctx.ws.denial_started = True
@@ -119,7 +115,7 @@ class WebSocketFSMValidator(BaseValidator):
         assert ctx.ws is not None
 
         if not ctx.ws.denial_started:
-            ctx.violation(WF_010)
+            ctx.violation(WF_009)
             return
 
         more_body = message.get("more_body", False)

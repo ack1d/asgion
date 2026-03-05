@@ -1,13 +1,18 @@
 import json
+import xml.etree.ElementTree as ET
 
 import pytest
 from click.testing import CliRunner
 
+from asgion.cli._driver import parse_path
 from asgion.cli._loader import LoadError, load_app
 from asgion.cli._output import (
+    _fmt_duration,
     format_json,
+    format_junit,
     format_rules_json,
     format_rules_text,
+    format_sarif,
     format_text,
 )
 from asgion.cli._runner import CheckReport, CheckResult, run_check
@@ -752,3 +757,179 @@ class TestCLI:
         )
         assert result.exit_code == 0
         assert "GET /" in result.output
+
+
+class TestParsePath:
+    def test_plain_path(self) -> None:
+        assert parse_path("/api") == ("http", "/api", "GET")
+
+    def test_method_prefix_post(self) -> None:
+        assert parse_path("POST:/api") == ("http", "/api", "POST")
+
+    def test_method_prefix_delete(self) -> None:
+        assert parse_path("DELETE:/api/1") == ("http", "/api/1", "DELETE")
+
+    def test_default_method_override(self) -> None:
+        assert parse_path("/api", default_method="POST") == ("http", "/api", "POST")
+
+
+class TestTimeout:
+    def test_hanging_app_times_out(self) -> None:
+        async def hanging_app(scope, receive, send):  # type: ignore[no-untyped-def]
+            if scope["type"] == "http":
+                import asyncio
+
+                await asyncio.sleep(999)
+
+        report = run_check(
+            hanging_app,
+            app_path="test:app",
+            run_lifespan=False,
+            scope_timeout=0.1,
+        )
+        assert len(report.results) == 1
+
+
+class TestFmtDuration:
+    def test_seconds(self) -> None:
+        assert _fmt_duration(5.0) == "5.00s"
+
+    def test_minutes(self) -> None:
+        assert _fmt_duration(90.0) == "1m30s"
+
+    def test_hours(self) -> None:
+        assert _fmt_duration(3661.0) == "1h1m1s"
+
+
+class TestFormatSarif:
+    def _make_report(self, *, violations: list[Violation] | None = None) -> CheckReport:
+        vv = violations or []
+        return CheckReport(
+            app_path="myapp:app",
+            results=[CheckResult("http", path="/", method="GET", violations=vv)],
+        )
+
+    def test_sarif_empty(self) -> None:
+        out = format_sarif(self._make_report())
+        data = json.loads(out)
+        assert data["version"] == "2.1.0"
+        assert data["runs"][0]["results"] == []
+
+    def test_sarif_with_violation(self) -> None:
+        v = Violation(
+            rule_id="HE-007",
+            severity=Severity.WARNING,
+            message="Unusual status",
+            hint="Check status code",
+        )
+        out = format_sarif(self._make_report(violations=[v]))
+        data = json.loads(out)
+        results = data["runs"][0]["results"]
+        assert len(results) == 1
+        assert results[0]["ruleId"] == "HE-007"
+        assert results[0]["level"] == "warning"
+        assert results[0]["message"]["text"] == "Unusual status"
+        assert results[0]["properties"]["hint"] == "Check status code"
+        rules = data["runs"][0]["tool"]["driver"]["rules"]
+        assert len(rules) == 1
+        assert rules[0]["id"] == "HE-007"
+
+
+class TestFormatJunit:
+    def _make_report(
+        self,
+        *,
+        violations: list[Violation] | None = None,
+        error: str | None = None,
+    ) -> CheckReport:
+        vv = violations or []
+        return CheckReport(
+            app_path="myapp:app",
+            results=[CheckResult("http", path="/", method="GET", violations=vv, error=error)],
+        )
+
+    def test_junit_empty(self) -> None:
+        out = format_junit(self._make_report())
+        root = ET.fromstring(out)  # noqa: S314
+        ts = root.find("testsuite")
+        assert ts is not None
+        assert ts.get("tests") == "1"
+        assert ts.get("failures") == "0"
+
+    def test_junit_with_violation(self) -> None:
+        v = Violation(rule_id="G-001", severity=Severity.ERROR, message="bad scope")
+        out = format_junit(self._make_report(violations=[v]))
+        root = ET.fromstring(out)  # noqa: S314
+        failure = root.find(".//failure")
+        assert failure is not None
+        assert "G-001" in (failure.text or "")
+
+    def test_junit_with_error(self) -> None:
+        out = format_junit(self._make_report(error="app crashed"))
+        root = ET.fromstring(out)  # noqa: S314
+        err = root.find(".//error")
+        assert err is not None
+        assert err.get("message") == "app crashed"
+        ts = root.find("testsuite")
+        assert ts is not None
+        assert ts.get("errors") == "1"
+
+
+class TestInit:
+    def test_init_creates_file(self, tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        monkeypatch.chdir(tmp_path)
+        runner = CliRunner()
+        result = runner.invoke(cli, ["init"])
+        assert result.exit_code == 0
+        assert (tmp_path / ".asgion.toml").exists()
+
+    def test_init_exists_no_force_exits_2(self, tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / ".asgion.toml").write_text("existing")
+        runner = CliRunner()
+        result = runner.invoke(cli, ["init"])
+        assert result.exit_code == 2
+
+    def test_init_force_overwrites(self, tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / ".asgion.toml").write_text("old")
+        runner = CliRunner()
+        result = runner.invoke(cli, ["init", "--force"])
+        assert result.exit_code == 0
+        content = (tmp_path / ".asgion.toml").read_text()
+        assert "profile" in content
+
+    def test_init_pyproject(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(cli, ["init", "--pyproject"])
+        assert result.exit_code == 0
+        assert "[tool.asgion]" in result.output
+
+
+class TestWsClose:
+    def test_ws_close_without_accept(self) -> None:
+        async def ws_close_app(scope, receive, send):  # type: ignore[no-untyped-def]
+            if scope["type"] == "http":
+                await receive()
+                await send(
+                    {
+                        "type": "http.response.start",
+                        "status": 200,
+                        "headers": [(b"content-type", b"text/plain; charset=utf-8")],
+                    }
+                )
+                await send({"type": "http.response.body", "body": b"OK", "more_body": False})
+                return
+            if scope["type"] != "websocket":
+                return
+            await receive()  # websocket.connect
+            await send({"type": "websocket.close", "code": 1000})
+
+        report = run_check(
+            ws_close_app,
+            app_path="test:app",
+            paths=("ws:/ws",),
+            run_lifespan=False,
+        )
+        assert len(report.results) == 1
+        assert report.results[0].scope_type == "websocket"

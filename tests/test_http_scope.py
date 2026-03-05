@@ -42,34 +42,52 @@ def test_hs001_wrong_type(validator: SpecEventValidator) -> None:
     assert_violation(ctx, "HS-001")
 
 
-def test_hs001_correct_type(validator: SpecEventValidator) -> None:
-    ctx = make_http_ctx()
-    validator.validate_scope(ctx, _valid_scope())
-    assert_no_violation(ctx, "HS-001")
+# --- Missing required field (HS-002..020 even) ---
 
 
-# --- HS-002/003: http_version required + type ---
-
-
-def test_hs002_missing_http_version(validator: SpecEventValidator) -> None:
+@pytest.mark.parametrize(
+    ("field", "rule_id"),
+    [
+        ("http_version", "HS-002"),
+        ("method", "HS-005"),
+        ("scheme", "HS-008"),
+        ("path", "HS-011"),
+        ("raw_path", "HS-014"),
+        ("query_string", "HS-016"),
+        ("root_path", "HS-018"),
+        ("headers", "HS-020"),
+    ],
+)
+def test_missing_required_field(validator: SpecEventValidator, field: str, rule_id: str) -> None:
     ctx = make_http_ctx()
     scope = _valid_scope()
-    del scope["http_version"]
+    del scope[field]
     validator.validate_scope(ctx, scope)
-    assert_violation(ctx, "HS-002")
+    assert_violation(ctx, rule_id)
 
 
-def test_hs003_http_version_wrong_type(validator: SpecEventValidator) -> None:
+# --- Wrong type (HS-003..019 odd) ---
+
+
+@pytest.mark.parametrize(
+    ("field", "bad_value", "rule_id"),
+    [
+        ("http_version", 1.1, "HS-003"),
+        ("method", 42, "HS-006"),
+        ("scheme", 443, "HS-009"),
+        ("path", b"/test", "HS-012"),
+        ("raw_path", "/test", "HS-015"),
+        ("query_string", "foo=bar", "HS-017"),
+        ("root_path", b"/app", "HS-019"),
+    ],
+)
+def test_wrong_type_field(
+    validator: SpecEventValidator, field: str, bad_value: Any, rule_id: str
+) -> None:
     ctx = make_http_ctx()
-    scope = {**_valid_scope(), "http_version": 1.1}
+    scope = {**_valid_scope(), field: bad_value}
     validator.validate_scope(ctx, scope)
-    assert_violation(ctx, "HS-003")
-
-
-def test_hs002_003_valid(validator: SpecEventValidator) -> None:
-    ctx = make_http_ctx()
-    validator.validate_scope(ctx, _valid_scope())
-    assert_no_violation(ctx, "HS-002", "HS-003")
+    assert_violation(ctx, rule_id)
 
 
 # --- HS-004: http_version value ---
@@ -83,54 +101,24 @@ def test_hs004_unknown_version(validator: SpecEventValidator) -> None:
     assert v.severity == "warning"
 
 
-def test_hs004_valid_versions(validator: SpecEventValidator) -> None:
-    for ver in ("1.0", "1.1", "2", "3"):
-        ctx = make_http_ctx()
-        scope = {**_valid_scope(), "http_version": ver}
-        validator.validate_scope(ctx, scope)
-        assert_no_violation(ctx, "HS-004")
-
-
-# --- HS-005/006: method required + type ---
-
-
-def test_hs005_missing_method(validator: SpecEventValidator) -> None:
+@pytest.mark.parametrize("ver", ["1.0", "1.1", "2", "3"])
+def test_hs004_valid_versions(validator: SpecEventValidator, ver: str) -> None:
     ctx = make_http_ctx()
-    scope = _valid_scope()
-    del scope["method"]
+    scope = {**_valid_scope(), "http_version": ver}
     validator.validate_scope(ctx, scope)
-    assert_violation(ctx, "HS-005")
-
-
-def test_hs006_method_wrong_type(validator: SpecEventValidator) -> None:
-    ctx = make_http_ctx()
-    scope = {**_valid_scope(), "method": 42}
-    validator.validate_scope(ctx, scope)
-    assert_violation(ctx, "HS-006")
-
-
-def test_hs005_006_valid(validator: SpecEventValidator) -> None:
-    ctx = make_http_ctx()
-    validator.validate_scope(ctx, _valid_scope())
-    assert_no_violation(ctx, "HS-005", "HS-006")
+    assert_no_violation(ctx, "HS-004")
 
 
 # --- HS-007: method uppercase ---
 
 
-def test_hs007_lowercase_method(validator: SpecEventValidator) -> None:
+@pytest.mark.parametrize("method", ["get", "Get"])
+def test_hs007_non_uppercase_method(validator: SpecEventValidator, method: str) -> None:
     ctx = make_http_ctx()
-    scope = {**_valid_scope(), "method": "get"}
+    scope = {**_valid_scope(), "method": method}
     validator.validate_scope(ctx, scope)
     v = assert_violation(ctx, "HS-007")
     assert v.severity == "warning"
-
-
-def test_hs007_mixed_case_method(validator: SpecEventValidator) -> None:
-    ctx = make_http_ctx()
-    scope = {**_valid_scope(), "method": "Get"}
-    validator.validate_scope(ctx, scope)
-    assert_violation(ctx, "HS-007")
 
 
 def test_hs007_uppercase_passes(validator: SpecEventValidator) -> None:
@@ -138,30 +126,6 @@ def test_hs007_uppercase_passes(validator: SpecEventValidator) -> None:
     scope = {**_valid_scope(), "method": "POST"}
     validator.validate_scope(ctx, scope)
     assert_no_violation(ctx, "HS-007")
-
-
-# --- HS-008/009: scheme required + type ---
-
-
-def test_hs008_missing_scheme(validator: SpecEventValidator) -> None:
-    ctx = make_http_ctx()
-    scope = _valid_scope()
-    del scope["scheme"]
-    validator.validate_scope(ctx, scope)
-    assert_violation(ctx, "HS-008")
-
-
-def test_hs009_scheme_wrong_type(validator: SpecEventValidator) -> None:
-    ctx = make_http_ctx()
-    scope = {**_valid_scope(), "scheme": 443}
-    validator.validate_scope(ctx, scope)
-    assert_violation(ctx, "HS-009")
-
-
-def test_hs008_009_valid(validator: SpecEventValidator) -> None:
-    ctx = make_http_ctx()
-    validator.validate_scope(ctx, _valid_scope())
-    assert_no_violation(ctx, "HS-008", "HS-009")
 
 
 # --- HS-010: scheme value ---
@@ -175,36 +139,12 @@ def test_hs010_unknown_scheme(validator: SpecEventValidator) -> None:
     assert v.severity == "warning"
 
 
-def test_hs010_valid_schemes(validator: SpecEventValidator) -> None:
-    for scheme in ("http", "https"):
-        ctx = make_http_ctx()
-        scope = {**_valid_scope(), "scheme": scheme}
-        validator.validate_scope(ctx, scope)
-        assert_no_violation(ctx, "HS-010")
-
-
-# --- HS-011/012: path required + type ---
-
-
-def test_hs011_missing_path(validator: SpecEventValidator) -> None:
+@pytest.mark.parametrize("scheme", ["http", "https"])
+def test_hs010_valid_schemes(validator: SpecEventValidator, scheme: str) -> None:
     ctx = make_http_ctx()
-    scope = _valid_scope()
-    del scope["path"]
+    scope = {**_valid_scope(), "scheme": scheme}
     validator.validate_scope(ctx, scope)
-    assert_violation(ctx, "HS-011")
-
-
-def test_hs012_path_wrong_type(validator: SpecEventValidator) -> None:
-    ctx = make_http_ctx()
-    scope = {**_valid_scope(), "path": b"/test"}
-    validator.validate_scope(ctx, scope)
-    assert_violation(ctx, "HS-012")
-
-
-def test_hs011_012_valid(validator: SpecEventValidator) -> None:
-    ctx = make_http_ctx()
-    validator.validate_scope(ctx, _valid_scope())
-    assert_no_violation(ctx, "HS-011", "HS-012")
+    assert_no_violation(ctx, "HS-010")
 
 
 # --- HS-013: path starts with / ---
@@ -223,95 +163,6 @@ def test_hs013_path_with_slash_passes(validator: SpecEventValidator) -> None:
     scope = {**_valid_scope(), "path": "/api/test"}
     validator.validate_scope(ctx, scope)
     assert_no_violation(ctx, "HS-013")
-
-
-# --- HS-014/015: raw_path required + type ---
-
-
-def test_hs014_missing_raw_path(validator: SpecEventValidator) -> None:
-    ctx = make_http_ctx()
-    scope = _valid_scope()
-    del scope["raw_path"]
-    validator.validate_scope(ctx, scope)
-    assert_violation(ctx, "HS-014")
-
-
-def test_hs015_raw_path_wrong_type(validator: SpecEventValidator) -> None:
-    ctx = make_http_ctx()
-    scope = {**_valid_scope(), "raw_path": "/test"}
-    validator.validate_scope(ctx, scope)
-    assert_violation(ctx, "HS-015")
-
-
-def test_hs014_015_valid(validator: SpecEventValidator) -> None:
-    ctx = make_http_ctx()
-    validator.validate_scope(ctx, _valid_scope())
-    assert_no_violation(ctx, "HS-014", "HS-015")
-
-
-# --- HS-016/017: query_string required + type ---
-
-
-def test_hs016_missing_query_string(validator: SpecEventValidator) -> None:
-    ctx = make_http_ctx()
-    scope = _valid_scope()
-    del scope["query_string"]
-    validator.validate_scope(ctx, scope)
-    assert_violation(ctx, "HS-016")
-
-
-def test_hs017_query_string_wrong_type(validator: SpecEventValidator) -> None:
-    ctx = make_http_ctx()
-    scope = {**_valid_scope(), "query_string": "foo=bar"}
-    validator.validate_scope(ctx, scope)
-    assert_violation(ctx, "HS-017")
-
-
-def test_hs016_017_valid(validator: SpecEventValidator) -> None:
-    ctx = make_http_ctx()
-    validator.validate_scope(ctx, _valid_scope())
-    assert_no_violation(ctx, "HS-016", "HS-017")
-
-
-# --- HS-018/019: root_path required + type ---
-
-
-def test_hs018_missing_root_path(validator: SpecEventValidator) -> None:
-    ctx = make_http_ctx()
-    scope = _valid_scope()
-    del scope["root_path"]
-    validator.validate_scope(ctx, scope)
-    assert_violation(ctx, "HS-018")
-
-
-def test_hs019_root_path_wrong_type(validator: SpecEventValidator) -> None:
-    ctx = make_http_ctx()
-    scope = {**_valid_scope(), "root_path": b"/app"}
-    validator.validate_scope(ctx, scope)
-    assert_violation(ctx, "HS-019")
-
-
-def test_hs018_019_valid(validator: SpecEventValidator) -> None:
-    ctx = make_http_ctx()
-    validator.validate_scope(ctx, _valid_scope())
-    assert_no_violation(ctx, "HS-018", "HS-019")
-
-
-# --- HS-020: headers required ---
-
-
-def test_hs020_missing_headers(validator: SpecEventValidator) -> None:
-    ctx = make_http_ctx()
-    scope = _valid_scope()
-    del scope["headers"]
-    validator.validate_scope(ctx, scope)
-    assert_violation(ctx, "HS-020")
-
-
-def test_hs020_headers_present_passes(validator: SpecEventValidator) -> None:
-    ctx = make_http_ctx()
-    validator.validate_scope(ctx, _valid_scope())
-    assert_no_violation(ctx, "HS-020")
 
 
 # --- HS-021: headers format ---
@@ -441,6 +292,20 @@ def test_hs026_server_port_none_passes(validator: SpecEventValidator) -> None:
 def test_hs026_server_bad_format(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     scope = {**_valid_scope(), "server": "localhost:443"}
+    validator.validate_scope(ctx, scope)
+    assert_violation(ctx, "HS-026")
+
+
+def test_hs026_server_bad_host_type(validator: SpecEventValidator) -> None:
+    ctx = make_http_ctx()
+    scope = {**_valid_scope(), "server": [127, 443]}
+    validator.validate_scope(ctx, scope)
+    assert_violation(ctx, "HS-026")
+
+
+def test_hs026_server_bad_port_type(validator: SpecEventValidator) -> None:
+    ctx = make_http_ctx()
+    scope = {**_valid_scope(), "server": ["localhost", "443"]}
     validator.validate_scope(ctx, scope)
     assert_violation(ctx, "HS-026")
 

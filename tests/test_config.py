@@ -175,19 +175,17 @@ def test_profile_minimal_allows_only_errors() -> None:
 # _parse_config: various inputs
 
 
-def test_parse_config_profile_recommended_sets_min_severity() -> None:
-    cfg = _parse_config({"profile": "recommended"})
-    assert cfg.min_severity == Severity.WARNING
-
-
-def test_parse_config_profile_minimal_sets_min_severity() -> None:
-    cfg = _parse_config({"profile": "minimal"})
-    assert cfg.min_severity == Severity.ERROR
-
-
-def test_parse_config_profile_strict() -> None:
-    cfg = _parse_config({"profile": "strict"})
-    assert cfg.min_severity == Severity.PERF
+@pytest.mark.parametrize(
+    ("profile", "expected_severity"),
+    [
+        ("recommended", Severity.WARNING),
+        ("minimal", Severity.ERROR),
+        ("strict", Severity.PERF),
+    ],
+)
+def test_parse_config_profile_sets_min_severity(profile: str, expected_severity: Severity) -> None:
+    cfg = _parse_config({"profile": profile})
+    assert cfg.min_severity == expected_severity
 
 
 def test_parse_config_explicit_min_severity_overrides_profile() -> None:
@@ -201,34 +199,30 @@ def test_parse_config_min_severity() -> None:
     assert cfg.min_severity == Severity.ERROR
 
 
-def test_parse_config_exclude_rules() -> None:
-    cfg = _parse_config({"exclude_rules": ["SEM-006", "G-001"]})
-    assert cfg.exclude_rules == frozenset({"SEM-006", "G-001"})
+@pytest.mark.parametrize(
+    ("field", "values", "expected"),
+    [
+        ("exclude_rules", ["SEM-006", "G-001"], frozenset({"SEM-006", "G-001"})),
+        ("include_rules", ["SEM-001", "SEM-002"], frozenset({"SEM-001", "SEM-002"})),
+        ("categories", ["http.fsm", "http.semantic"], frozenset({"http.fsm", "http.semantic"})),
+    ],
+)
+def test_parse_config_list_field(field: str, values: list[str], expected: frozenset[str]) -> None:
+    cfg = _parse_config({field: values})
+    assert getattr(cfg, field) == expected
 
 
-def test_parse_config_include_rules() -> None:
-    cfg = _parse_config({"include_rules": ["SEM-001", "SEM-002"]})
-    assert cfg.include_rules == frozenset({"SEM-001", "SEM-002"})
-
-
-def test_parse_config_categories() -> None:
-    cfg = _parse_config({"categories": ["http.fsm", "http.semantic"]})
-    assert cfg.categories == frozenset({"http.fsm", "http.semantic"})
-
-
-def test_parse_config_exclude_rules_non_list_ignored() -> None:
-    cfg = _parse_config({"exclude_rules": "SEM-006"})
-    assert cfg.exclude_rules == frozenset()
-
-
-def test_parse_config_include_rules_non_list_ignored() -> None:
-    cfg = _parse_config({"include_rules": "SEM-001"})
-    assert cfg.include_rules == frozenset()
-
-
-def test_parse_config_categories_non_list_ignored() -> None:
-    cfg = _parse_config({"categories": "http"})
-    assert cfg.categories == frozenset()
+@pytest.mark.parametrize(
+    ("field", "bad_value"),
+    [
+        ("exclude_rules", "SEM-006"),
+        ("include_rules", "SEM-001"),
+        ("categories", "http"),
+    ],
+)
+def test_parse_config_non_list_ignored(field: str, bad_value: str) -> None:
+    cfg = _parse_config({field: bad_value})
+    assert getattr(cfg, field) == frozenset()
 
 
 def test_parse_config_thresholds() -> None:

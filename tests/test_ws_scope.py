@@ -255,6 +255,27 @@ def test_ws022_client_bad_format(validator: SpecEventValidator) -> None:
     assert_violation(ctx, "WS-022")
 
 
+def test_ws022_client_bad_host_type(validator: SpecEventValidator) -> None:
+    ctx = make_ws_ctx()
+    scope = {**_valid_scope(), "client": [127, 8080]}
+    validator.validate_scope(ctx, scope)
+    assert_violation(ctx, "WS-022")
+
+
+def test_ws022_client_bad_port_type(validator: SpecEventValidator) -> None:
+    ctx = make_ws_ctx()
+    scope = {**_valid_scope(), "client": ["127.0.0.1", "8080"]}
+    validator.validate_scope(ctx, scope)
+    assert_violation(ctx, "WS-022")
+
+
+def test_ws022_client_valid_tuple_passes(validator: SpecEventValidator) -> None:
+    ctx = make_ws_ctx()
+    scope = {**_valid_scope(), "client": ["127.0.0.1", 8080]}
+    validator.validate_scope(ctx, scope)
+    assert_no_violation(ctx, "WS-022")
+
+
 def test_ws022_client_none_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     scope = {**_valid_scope(), "client": None}
@@ -270,6 +291,27 @@ def test_ws023_server_bad_format(validator: SpecEventValidator) -> None:
     scope = {**_valid_scope(), "server": "localhost"}
     validator.validate_scope(ctx, scope)
     assert_violation(ctx, "WS-023")
+
+
+def test_ws023_server_bad_host_type(validator: SpecEventValidator) -> None:
+    ctx = make_ws_ctx()
+    scope = {**_valid_scope(), "server": [127, 443]}
+    validator.validate_scope(ctx, scope)
+    assert_violation(ctx, "WS-023")
+
+
+def test_ws023_server_bad_port_type(validator: SpecEventValidator) -> None:
+    ctx = make_ws_ctx()
+    scope = {**_valid_scope(), "server": ["localhost", "443"]}
+    validator.validate_scope(ctx, scope)
+    assert_violation(ctx, "WS-023")
+
+
+def test_ws023_server_valid_passes(validator: SpecEventValidator) -> None:
+    ctx = make_ws_ctx()
+    scope = {**_valid_scope(), "server": ["localhost", 443]}
+    validator.validate_scope(ctx, scope)
+    assert_no_violation(ctx, "WS-023")
 
 
 def test_ws023_server_none_passes(validator: SpecEventValidator) -> None:
@@ -292,6 +334,13 @@ def test_ws024_extensions_bad_type(validator: SpecEventValidator) -> None:
 def test_ws024_extensions_none_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     scope = {**_valid_scope(), "extensions": None}
+    validator.validate_scope(ctx, scope)
+    assert_no_violation(ctx, "WS-024")
+
+
+def test_ws024_extensions_dict_passes(validator: SpecEventValidator) -> None:
+    ctx = make_ws_ctx()
+    scope = {**_valid_scope(), "extensions": {"tls": {}}}
     validator.validate_scope(ctx, scope)
     assert_no_violation(ctx, "WS-024")
 

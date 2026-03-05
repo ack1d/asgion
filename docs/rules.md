@@ -6,7 +6,7 @@ All validation rules that Asgion checks, grouped by protocol layer.
 
 Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asgiref](https://github.com/django/asgiref)).
 
-**Total: 164 rules**
+**Total: 163 rules**
 
 | Severity | Meaning |
 |----------|---------|
@@ -198,11 +198,10 @@ Rules are based on the [ASGI spec](https://asgi.readthedocs.io/en/latest/) ([asg
 | `WF-005` | error | Send/close after websocket.disconnect | Client has disconnected, cannot send data |
 | `WF-006` | error | Duplicate websocket.accept | - |
 | `WF-007` | info | websocket.close sent before accept - will result in HTTP 403 | This is valid for rejecting connections |
-| `WF-008` | error | send() called after websocket.close | - |
-| `WF-009` | error | websocket.http.response.start sent in wrong state | HTTP denial response can only be sent before accepting |
-| `WF-010` | error | websocket.http.response.body without preceding http.response.start | - |
-| `WF-011` | error | websocket.send after HTTP denial response started | Cannot send WebSocket data during HTTP denial flow |
-| `WF-012` | warning | websocket.receive after connection closed | - |
+| `WF-008` | error | websocket.http.response.start sent in wrong state | HTTP denial response can only be sent before accepting |
+| `WF-009` | error | websocket.http.response.body without preceding http.response.start | - |
+| `WF-010` | error | websocket.send after HTTP denial response started | Cannot send WebSocket data during HTTP denial flow |
+| `WF-011` | warning | websocket.receive after connection closed | - |
 
 ## Lifespan Events (Layer 6)
 > Spec: <https://asgi.readthedocs.io/en/latest/specs/lifespan.html>
