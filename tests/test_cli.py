@@ -744,6 +744,37 @@ class TestCLI:
         assert "GET /only-this" in result.output
         assert "GET /other" not in result.output
 
+    def test_trace_strict_exits_1(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            ["trace", "tests._cli_fixtures:bad_app", "--strict", "--no-lifespan"],
+        )
+        assert result.exit_code == 1
+
+    def test_trace_strict_clean_exits_0(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            ["trace", "tests._cli_fixtures:good_app", "--strict", "--no-lifespan"],
+        )
+        assert result.exit_code == 0
+
+    def test_trace_strict_min_severity_filters(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "trace",
+                "tests._cli_fixtures:warn_only_app",
+                "--strict",
+                "--min-severity",
+                "error",
+                "--no-lifespan",
+            ],
+        )
+        assert result.exit_code == 0
+
     def test_check_no_path_no_config_defaults_to_root(self) -> None:
         runner = CliRunner()
         result = runner.invoke(

@@ -368,6 +368,11 @@ def rules(
       asgion rules HF-002 \n
       asgion rules --layer http --severity error \n
       asgion rules --format JSON \n
+
+    \b
+    Exit codes:
+      0  success \n
+      2  unknown rule ID \n
     """
     if rule_id is not None:
         if layer is not None or sev is not None:
@@ -495,6 +500,12 @@ def trace(
       asgion trace myapp:app --format json \n
       asgion trace myapp:app --path "POST:/api/users" -d '{}' \n
       asgion trace myapp:app --path ws:/ws/chat \n
+
+    \b
+    Exit codes:
+      0  success (without --strict, always 0) \n
+      1  violations found (only with --strict) \n
+      2  runtime error (bad module path, etc.) \n
     """
     app = _load(app_path)
 
@@ -583,6 +594,11 @@ def init(pyproject: bool, force: bool) -> None:
       asgion init                # create .asgion.toml \n
       asgion init --pyproject    # print [tool.asgion] block to stdout \n
       asgion init --force        # overwrite existing .asgion.toml \n
+
+    \b
+    Exit codes:
+      0  success \n
+      2  file already exists (without --force) \n
     """
     if pyproject:
         if force:
