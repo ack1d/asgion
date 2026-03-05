@@ -130,7 +130,7 @@ def cli() -> None:
     type=click.Choice(["perf", "info", "warning", "error"]),
     default="perf",
     show_default=True,
-    help="Minimum severity to report.",
+    help="Minimum severity to report. Note: --profile may set a higher floor.",
 )
 @click.option("--no-color", is_flag=True, envvar="NO_COLOR", help="Disable ANSI colors.")
 @click.option(
@@ -258,7 +258,16 @@ def check(
         config = dataclasses.replace(config, categories=config.categories | frozenset(layers))
 
     if select:
+        from fnmatch import fnmatch
+
         cli_include = frozenset(r.strip() for r in select.split(",") if r.strip())
+        all_ids = [r.id for r in ALL_RULES]
+        for pattern in cli_include:
+            if any(c in pattern for c in "*?["):
+                if not any(fnmatch(rid, pattern) for rid in all_ids):
+                    click.echo(f"Warning: no rules match pattern: {pattern}", err=True)
+            elif pattern not in RULES:
+                click.echo(f"Warning: unknown rule: {pattern}", err=True)
         config = dataclasses.replace(config, include_rules=config.include_rules | cli_include)
 
     raw_excluded = (
@@ -272,8 +281,13 @@ def check(
         all_ids = [r.id for r in ALL_RULES]
         for pattern in raw_excluded:
             if any(c in pattern for c in "*?["):
-                expanded.update(rid for rid in all_ids if fnmatch(rid, pattern))
+                matched = [rid for rid in all_ids if fnmatch(rid, pattern)]
+                if not matched:
+                    click.echo(f"Warning: no rules match pattern: {pattern}", err=True)
+                expanded.update(matched)
             else:
+                if pattern not in RULES:
+                    click.echo(f"Warning: unknown rule: {pattern}", err=True)
                 expanded.add(pattern)
         excluded = expanded
     severity = Severity(min_severity)

@@ -210,10 +210,25 @@ class TestOutput:
         assert "GET /a" in entry["paths"]
         assert "GET /b" in entry["paths"]
 
+    def test_text_error_only_summary(self) -> None:
+        report = CheckReport(
+            app_path="myapp:app",
+            results=[
+                CheckResult("http", path="/", method="GET", violations=[], error="app crashed")
+            ],
+        )
+        text = format_text(report, no_color=True)
+        assert "ERROR" in text
+        assert "app crashed" in text
+
     def test_rules_text(self) -> None:
         text = format_rules_text(ALL_RULES, no_color=True)
         assert str(len(ALL_RULES)) in text
         assert "G-001" in text
+
+    def test_rules_text_empty(self) -> None:
+        text = format_rules_text([], no_color=True, total=len(ALL_RULES))
+        assert f"0 / {len(ALL_RULES)}" in text
 
     def test_rules_json(self) -> None:
         out = format_rules_json(ALL_RULES)
@@ -352,6 +367,14 @@ class TestCLI:
         assert "warning" in result.output
         assert "  error  " not in result.output
 
+    def test_rules_empty_filter(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(
+            cli, ["rules", "--no-color", "--layer", "lifespan", "--severity", "perf"]
+        )
+        assert result.exit_code == 0
+        assert f"0 / {len(ALL_RULES)}" in result.output
+
     def test_rules_layer_and_severity_filter(self) -> None:
         runner = CliRunner()
         result = runner.invoke(
@@ -374,6 +397,7 @@ class TestCLI:
             ("ws:/ws", "good_ws_app", "WS /ws"),
             ("wss:/ws", "good_ws_app", "WS /ws"),
             ("http:/api", "good_lifespan_app", "GET /api"),
+            ("https:/api", "good_lifespan_app", "GET /api"),
         ],
     )
     def test_check_protocol_prefix(self, prefix_path: str, app: str, expected_label: str) -> None:
@@ -775,6 +799,67 @@ class TestCLI:
         )
         assert result.exit_code == 0
 
+    def test_exclude_rules_unknown_warns(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "tests._cli_fixtures:good_app",
+                "--exclude-rules",
+                "NOPE-999",
+                "--no-lifespan",
+            ],
+        )
+        assert result.exit_code == 0
+        assert "Warning: unknown rule: NOPE-999" in result.output
+
+    def test_exclude_rules_glob_no_match_warns(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            ["check", "tests._cli_fixtures:good_app", "--exclude-rules", "ZZZ-*", "--no-lifespan"],
+        )
+        assert result.exit_code == 0
+        assert "Warning: no rules match pattern: ZZZ-*" in result.output
+
+    def test_select_unknown_warns(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            ["check", "tests._cli_fixtures:good_app", "--select", "NOPE-999", "--no-lifespan"],
+        )
+        assert result.exit_code == 0
+        assert "Warning: unknown rule: NOPE-999" in result.output
+
+    def test_check_profile_with_exclude_and_severity(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
+        config = tmp_path / ".asgion.toml"
+        config.write_bytes(b'[profiles.ci]\nmin_severity = "warning"\n')
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "tests._cli_fixtures:bad_app",
+                "--profile",
+                "ci",
+                "--config",
+                str(config),
+                "--exclude-rules",
+                "HF-*",
+                "--min-severity",
+                "error",
+                "--no-lifespan",
+                "--format",
+                "json",
+            ],
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        for v in data["violations"]:
+            assert v["severity"] == "error"
+            assert not v["rule_id"].startswith("HF-")
+
     def test_check_no_path_no_config_defaults_to_root(self) -> None:
         runner = CliRunner()
         result = runner.invoke(
@@ -799,6 +884,9 @@ class TestParsePath:
 
     def test_method_prefix_delete(self) -> None:
         assert parse_path("DELETE:/api/1") == ("http", "/api/1", "DELETE")
+
+    def test_https_prefix(self) -> None:
+        assert parse_path("https:/api") == ("http", "/api", "GET")
 
     def test_default_method_override(self) -> None:
         assert parse_path("/api", default_method="POST") == ("http", "/api", "POST")
