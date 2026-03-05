@@ -185,7 +185,12 @@ WS_SPEC = ProtocolSpec(
             checks=(
                 FieldType("bytes", bytes, "WE-009", nullable=True),
                 FieldType("text", str, "WE-010", nullable=True),
-                ExactlyOneNonNull("bytes", "text", "WE-008", hint="Set one to a value and the other to None"),
+                ExactlyOneNonNull(
+                    "bytes",
+                    "text",
+                    "WE-008",
+                    hint="Set one to a value and the other to None",
+                ),
             ),
         ),
         EventSpec(

@@ -61,7 +61,6 @@ def assert_violation(ctx: ConnectionContext, rule_id: str) -> Violation:
     return matching[0]
 
 
-
 def make_asgi_scope(scope_type: str = "http") -> dict:
     """Return a minimal valid ASGI scope dict for driving apps end-to-end."""
     if scope_type == "http":
