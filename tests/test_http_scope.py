@@ -4,7 +4,12 @@ import pytest
 
 from asgion.spec import ALL_SPECS
 from asgion.validators.spec_events import SpecEventValidator
-from tests.conftest import assert_no_violations, assert_violation, make_http_ctx
+from tests.conftest import (
+    assert_no_violation,
+    assert_no_violations,
+    assert_violation,
+    make_http_ctx,
+)
 
 
 @pytest.fixture
@@ -40,8 +45,7 @@ def test_hs001_wrong_type(validator: SpecEventValidator) -> None:
 def test_hs001_correct_type(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_scope(ctx, _valid_scope())
-    matching = [v for v in ctx.violations if v.rule_id == "HS-001"]
-    assert matching == []
+    assert_no_violation(ctx, "HS-001")
 
 
 # --- HS-002/003: http_version required + type ---
@@ -65,8 +69,7 @@ def test_hs003_http_version_wrong_type(validator: SpecEventValidator) -> None:
 def test_hs002_003_valid(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_scope(ctx, _valid_scope())
-    matching = [v for v in ctx.violations if v.rule_id in ("HS-002", "HS-003")]
-    assert matching == []
+    assert_no_violation(ctx, "HS-002", "HS-003")
 
 
 # --- HS-004: http_version value ---
@@ -85,8 +88,7 @@ def test_hs004_valid_versions(validator: SpecEventValidator) -> None:
         ctx = make_http_ctx()
         scope = {**_valid_scope(), "http_version": ver}
         validator.validate_scope(ctx, scope)
-        matching = [v for v in ctx.violations if v.rule_id == "HS-004"]
-        assert matching == [], f"http_version '{ver}' should be valid"
+        assert_no_violation(ctx, "HS-004")
 
 
 # --- HS-005/006: method required + type ---
@@ -110,8 +112,7 @@ def test_hs006_method_wrong_type(validator: SpecEventValidator) -> None:
 def test_hs005_006_valid(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_scope(ctx, _valid_scope())
-    matching = [v for v in ctx.violations if v.rule_id in ("HS-005", "HS-006")]
-    assert matching == []
+    assert_no_violation(ctx, "HS-005", "HS-006")
 
 
 # --- HS-007: method uppercase ---
@@ -136,8 +137,7 @@ def test_hs007_uppercase_passes(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     scope = {**_valid_scope(), "method": "POST"}
     validator.validate_scope(ctx, scope)
-    matching = [v for v in ctx.violations if v.rule_id == "HS-007"]
-    assert matching == []
+    assert_no_violation(ctx, "HS-007")
 
 
 # --- HS-008/009: scheme required + type ---
@@ -161,8 +161,7 @@ def test_hs009_scheme_wrong_type(validator: SpecEventValidator) -> None:
 def test_hs008_009_valid(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_scope(ctx, _valid_scope())
-    matching = [v for v in ctx.violations if v.rule_id in ("HS-008", "HS-009")]
-    assert matching == []
+    assert_no_violation(ctx, "HS-008", "HS-009")
 
 
 # --- HS-010: scheme value ---
@@ -181,8 +180,7 @@ def test_hs010_valid_schemes(validator: SpecEventValidator) -> None:
         ctx = make_http_ctx()
         scope = {**_valid_scope(), "scheme": scheme}
         validator.validate_scope(ctx, scope)
-        matching = [v for v in ctx.violations if v.rule_id == "HS-010"]
-        assert matching == [], f"scheme '{scheme}' should be valid"
+        assert_no_violation(ctx, "HS-010")
 
 
 # --- HS-011/012: path required + type ---
@@ -206,8 +204,7 @@ def test_hs012_path_wrong_type(validator: SpecEventValidator) -> None:
 def test_hs011_012_valid(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_scope(ctx, _valid_scope())
-    matching = [v for v in ctx.violations if v.rule_id in ("HS-011", "HS-012")]
-    assert matching == []
+    assert_no_violation(ctx, "HS-011", "HS-012")
 
 
 # --- HS-013: path starts with / ---
@@ -225,8 +222,7 @@ def test_hs013_path_with_slash_passes(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     scope = {**_valid_scope(), "path": "/api/test"}
     validator.validate_scope(ctx, scope)
-    matching = [v for v in ctx.violations if v.rule_id == "HS-013"]
-    assert matching == []
+    assert_no_violation(ctx, "HS-013")
 
 
 # --- HS-014/015: raw_path required + type ---
@@ -250,8 +246,7 @@ def test_hs015_raw_path_wrong_type(validator: SpecEventValidator) -> None:
 def test_hs014_015_valid(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_scope(ctx, _valid_scope())
-    matching = [v for v in ctx.violations if v.rule_id in ("HS-014", "HS-015")]
-    assert matching == []
+    assert_no_violation(ctx, "HS-014", "HS-015")
 
 
 # --- HS-016/017: query_string required + type ---
@@ -275,8 +270,7 @@ def test_hs017_query_string_wrong_type(validator: SpecEventValidator) -> None:
 def test_hs016_017_valid(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_scope(ctx, _valid_scope())
-    matching = [v for v in ctx.violations if v.rule_id in ("HS-016", "HS-017")]
-    assert matching == []
+    assert_no_violation(ctx, "HS-016", "HS-017")
 
 
 # --- HS-018/019: root_path required + type ---
@@ -300,8 +294,7 @@ def test_hs019_root_path_wrong_type(validator: SpecEventValidator) -> None:
 def test_hs018_019_valid(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_scope(ctx, _valid_scope())
-    matching = [v for v in ctx.violations if v.rule_id in ("HS-018", "HS-019")]
-    assert matching == []
+    assert_no_violation(ctx, "HS-018", "HS-019")
 
 
 # --- HS-020: headers required ---
@@ -318,8 +311,7 @@ def test_hs020_missing_headers(validator: SpecEventValidator) -> None:
 def test_hs020_headers_present_passes(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_scope(ctx, _valid_scope())
-    matching = [v for v in ctx.violations if v.rule_id == "HS-020"]
-    assert matching == []
+    assert_no_violation(ctx, "HS-020")
 
 
 # --- HS-021: headers format ---
@@ -343,8 +335,7 @@ def test_hs021_valid_headers_passes(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     scope = {**_valid_scope(), "headers": [(b"host", b"localhost")]}
     validator.validate_scope(ctx, scope)
-    matching = [v for v in ctx.violations if v.rule_id == "HS-021"]
-    assert matching == []
+    assert_no_violation(ctx, "HS-021")
 
 
 # --- HS-022: header name type ---
@@ -382,8 +373,7 @@ def test_hs024_lowercase_passes(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     scope = {**_valid_scope(), "headers": [(b"content-type", b"text/html")]}
     validator.validate_scope(ctx, scope)
-    matching = [v for v in ctx.violations if v.rule_id == "HS-024"]
-    assert matching == []
+    assert_no_violation(ctx, "HS-024")
 
 
 # --- HS-025: client format ---
@@ -393,16 +383,14 @@ def test_hs025_client_none_passes(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     scope = {**_valid_scope(), "client": None}
     validator.validate_scope(ctx, scope)
-    matching = [v for v in ctx.violations if v.rule_id == "HS-025"]
-    assert matching == []
+    assert_no_violation(ctx, "HS-025")
 
 
 def test_hs025_client_valid_tuple_passes(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     scope = {**_valid_scope(), "client": ["127.0.0.1", 8080]}
     validator.validate_scope(ctx, scope)
-    matching = [v for v in ctx.violations if v.rule_id == "HS-025"]
-    assert matching == []
+    assert_no_violation(ctx, "HS-025")
 
 
 def test_hs025_client_bad_format(validator: SpecEventValidator) -> None:
@@ -433,24 +421,21 @@ def test_hs026_server_none_passes(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     scope = {**_valid_scope(), "server": None}
     validator.validate_scope(ctx, scope)
-    matching = [v for v in ctx.violations if v.rule_id == "HS-026"]
-    assert matching == []
+    assert_no_violation(ctx, "HS-026")
 
 
 def test_hs026_server_valid_passes(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     scope = {**_valid_scope(), "server": ["localhost", 443]}
     validator.validate_scope(ctx, scope)
-    matching = [v for v in ctx.violations if v.rule_id == "HS-026"]
-    assert matching == []
+    assert_no_violation(ctx, "HS-026")
 
 
 def test_hs026_server_port_none_passes(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     scope = {**_valid_scope(), "server": ["localhost", None]}
     validator.validate_scope(ctx, scope)
-    matching = [v for v in ctx.violations if v.rule_id == "HS-026"]
-    assert matching == []
+    assert_no_violation(ctx, "HS-026")
 
 
 def test_hs026_server_bad_format(validator: SpecEventValidator) -> None:
@@ -467,16 +452,14 @@ def test_hs027_extensions_none_passes(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     scope = {**_valid_scope(), "extensions": None}
     validator.validate_scope(ctx, scope)
-    matching = [v for v in ctx.violations if v.rule_id == "HS-027"]
-    assert matching == []
+    assert_no_violation(ctx, "HS-027")
 
 
 def test_hs027_extensions_dict_passes(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     scope = {**_valid_scope(), "extensions": {"tls": {}}}
     validator.validate_scope(ctx, scope)
-    matching = [v for v in ctx.violations if v.rule_id == "HS-027"]
-    assert matching == []
+    assert_no_violation(ctx, "HS-027")
 
 
 def test_hs027_extensions_bad_type(validator: SpecEventValidator) -> None:
@@ -493,8 +476,7 @@ def test_hs028_state_dict_passes(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     scope = {**_valid_scope(), "state": {}}
     validator.validate_scope(ctx, scope)
-    matching = [v for v in ctx.violations if v.rule_id == "HS-028"]
-    assert matching == []
+    assert_no_violation(ctx, "HS-028")
 
 
 def test_hs028_state_bad_type(validator: SpecEventValidator) -> None:
@@ -507,8 +489,7 @@ def test_hs028_state_bad_type(validator: SpecEventValidator) -> None:
 def test_hs028_state_absent_passes(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_scope(ctx, _valid_scope())
-    matching = [v for v in ctx.violations if v.rule_id == "HS-028"]
-    assert matching == []
+    assert_no_violation(ctx, "HS-028")
 
 
 # --- Full valid scope ---

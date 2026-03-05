@@ -2,7 +2,12 @@ import pytest
 
 from asgion.spec import ALL_SPECS
 from asgion.validators.spec_events import SpecEventValidator
-from tests.conftest import assert_no_violations, assert_violation, make_lifespan_ctx
+from tests.conftest import (
+    assert_no_violation,
+    assert_no_violations,
+    assert_violation,
+    make_lifespan_ctx,
+)
 
 
 @pytest.fixture
@@ -93,15 +98,13 @@ def test_le004_startup_failed_message_invalid_type(
 def test_le004_startup_failed_message_str_passes(validator: SpecEventValidator) -> None:
     ctx = make_lifespan_ctx()
     validator.validate_send(ctx, {"type": "lifespan.startup.failed", "message": "startup error"})
-    matching = [v for v in ctx.violations if v.rule_id == "LE-003"]
-    assert matching == []
+    assert_no_violation(ctx, "LE-003")
 
 
 def test_le004_startup_failed_message_absent_passes(validator: SpecEventValidator) -> None:
     ctx = make_lifespan_ctx()
     validator.validate_send(ctx, {"type": "lifespan.startup.failed"})
-    matching = [v for v in ctx.violations if v.rule_id == "LE-003"]
-    assert matching == []
+    assert_no_violation(ctx, "LE-003")
 
 
 @pytest.mark.parametrize(
@@ -125,12 +128,10 @@ def test_le006_shutdown_failed_message_invalid_type(
 def test_le006_shutdown_failed_message_str_passes(validator: SpecEventValidator) -> None:
     ctx = make_lifespan_ctx()
     validator.validate_send(ctx, {"type": "lifespan.shutdown.failed", "message": "shutdown error"})
-    matching = [v for v in ctx.violations if v.rule_id == "LE-004"]
-    assert matching == []
+    assert_no_violation(ctx, "LE-004")
 
 
 def test_le006_shutdown_failed_message_absent_passes(validator: SpecEventValidator) -> None:
     ctx = make_lifespan_ctx()
     validator.validate_send(ctx, {"type": "lifespan.shutdown.failed"})
-    matching = [v for v in ctx.violations if v.rule_id == "LE-004"]
-    assert matching == []
+    assert_no_violation(ctx, "LE-004")

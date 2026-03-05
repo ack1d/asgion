@@ -5,7 +5,12 @@ import pytest
 from asgion.core.config import AsgionConfig
 from asgion.core.context import ConnectionContext
 from asgion.validators.semantic import SemanticValidator
-from tests.conftest import assert_no_violations, assert_violation, make_http_ctx
+from tests.conftest import (
+    assert_no_violation,
+    assert_no_violations,
+    assert_violation,
+    make_http_ctx,
+)
 
 
 @pytest.fixture
@@ -44,8 +49,7 @@ def test_sem001_single_content_type_ok(validator: SemanticValidator) -> None:
             ],
         },
     )
-    matching = [v for v in ctx.violations if v.rule_id == "SEM-001"]
-    assert matching == []
+    assert_no_violation(ctx, "SEM-001")
 
 
 # --- SEM-002: Missing Content-Type on 2xx ---
@@ -74,8 +78,7 @@ def test_sem002_no_content_type_on_204_ok(validator: SemanticValidator) -> None:
             "headers": [],
         },
     )
-    matching = [v for v in ctx.violations if v.rule_id == "SEM-002"]
-    assert matching == []
+    assert_no_violation(ctx, "SEM-002")
 
 
 def test_sem002_no_content_type_on_304_ok(validator: SemanticValidator) -> None:
@@ -88,8 +91,7 @@ def test_sem002_no_content_type_on_304_ok(validator: SemanticValidator) -> None:
             "headers": [],
         },
     )
-    matching = [v for v in ctx.violations if v.rule_id == "SEM-002"]
-    assert matching == []
+    assert_no_violation(ctx, "SEM-002")
 
 
 def test_sem002_no_content_type_on_1xx_ok(validator: SemanticValidator) -> None:
@@ -102,8 +104,7 @@ def test_sem002_no_content_type_on_1xx_ok(validator: SemanticValidator) -> None:
             "headers": [],
         },
     )
-    matching = [v for v in ctx.violations if v.rule_id == "SEM-002"]
-    assert matching == []
+    assert_no_violation(ctx, "SEM-002")
 
 
 def test_sem002_no_content_type_on_404_ok(validator: SemanticValidator) -> None:
@@ -117,8 +118,7 @@ def test_sem002_no_content_type_on_404_ok(validator: SemanticValidator) -> None:
             "headers": [],
         },
     )
-    matching = [v for v in ctx.violations if v.rule_id == "SEM-002"]
-    assert matching == []
+    assert_no_violation(ctx, "SEM-002")
 
 
 # --- SEM-003: Content-Length mismatch ---
@@ -154,8 +154,7 @@ def test_sem003_content_length_matches(validator: SemanticValidator) -> None:
     )
     ctx.http.total_body_bytes = 5
     validator.validate_complete(ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "SEM-003"]
-    assert matching == []
+    assert_no_violation(ctx, "SEM-003")
 
 
 def test_sem003_no_content_length_ok(validator: SemanticValidator) -> None:
@@ -171,8 +170,7 @@ def test_sem003_no_content_length_ok(validator: SemanticValidator) -> None:
     )
     ctx.http.total_body_bytes = 100
     validator.validate_complete(ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "SEM-003"]
-    assert matching == []
+    assert_no_violation(ctx, "SEM-003")
 
 
 def test_sem003_skipped_on_disconnect(validator: SemanticValidator) -> None:
@@ -189,8 +187,7 @@ def test_sem003_skipped_on_disconnect(validator: SemanticValidator) -> None:
     ctx.http.total_body_bytes = 3
     ctx.http.disconnected = True
     validator.validate_complete(ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "SEM-003"]
-    assert matching == []
+    assert_no_violation(ctx, "SEM-003")
 
 
 # --- SEM-004: Set-Cookie without Secure on http:// ---
@@ -244,8 +241,7 @@ def test_sem004_set_cookie_with_secure_on_http_ok(
             ],
         },
     )
-    matching = [v for v in ctx.violations if v.rule_id == "SEM-004"]
-    assert matching == []
+    assert_no_violation(ctx, "SEM-004")
 
 
 def test_sem004_set_cookie_on_https_ok(validator: SemanticValidator) -> None:
@@ -262,8 +258,7 @@ def test_sem004_set_cookie_on_https_ok(validator: SemanticValidator) -> None:
             ],
         },
     )
-    matching = [v for v in ctx.violations if v.rule_id == "SEM-004"]
-    assert matching == []
+    assert_no_violation(ctx, "SEM-004")
 
 
 # --- SEM-005: App completed without http.disconnect ---
@@ -286,8 +281,7 @@ def test_sem005_disconnect_received_ok(validator: SemanticValidator) -> None:
     ctx.http.body_complete = False
     ctx.http.disconnected = True
     validator.validate_complete(ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "SEM-005"]
-    assert matching == []
+    assert_no_violation(ctx, "SEM-005")
 
 
 def test_sem005_body_complete_ok(validator: SemanticValidator) -> None:
@@ -297,8 +291,7 @@ def test_sem005_body_complete_ok(validator: SemanticValidator) -> None:
     ctx.http.body_complete = True
     ctx.http.disconnected = False
     validator.validate_complete(ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "SEM-005"]
-    assert matching == []
+    assert_no_violation(ctx, "SEM-005")
 
 
 def test_sem005_no_response_start_ok(validator: SemanticValidator) -> None:
@@ -306,8 +299,7 @@ def test_sem005_no_response_start_ok(validator: SemanticValidator) -> None:
     assert ctx.http is not None
     ctx.http.response_start_count = 0
     validator.validate_complete(ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "SEM-005"]
-    assert matching == []
+    assert_no_violation(ctx, "SEM-005")
 
 
 # --- Non-HTTP scope skipped ---
@@ -349,15 +341,13 @@ def test_sem006_fast_ttfb_ok(validator: SemanticValidator) -> None:
     ctx.http.request_received_at = now - 0.1
     ctx.http.response_started_at = now
     validator.validate_complete(ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "SEM-006"]
-    assert matching == []
+    assert_no_violation(ctx, "SEM-006")
 
 
 def test_sem006_no_timestamps_ok(validator: SemanticValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_complete(ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "SEM-006"]
-    assert matching == []
+    assert_no_violation(ctx, "SEM-006")
 
 
 # --- SEM-007: Slow lifecycle ---
@@ -374,8 +364,7 @@ def test_sem007_slow_lifecycle(validator: SemanticValidator) -> None:
 def test_sem007_fast_lifecycle_ok(validator: SemanticValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_complete(ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "SEM-007"]
-    assert matching == []
+    assert_no_violation(ctx, "SEM-007")
 
 
 # --- SEM-008: Large response body ---
@@ -394,8 +383,7 @@ def test_sem008_small_body_ok(validator: SemanticValidator) -> None:
     assert ctx.http is not None
     ctx.http.total_body_bytes = 1024
     validator.validate_complete(ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "SEM-008"]
-    assert matching == []
+    assert_no_violation(ctx, "SEM-008")
 
 
 # --- SEM-009: Response body not streamed ---
@@ -416,8 +404,7 @@ def test_sem009_multiple_chunks_ok(validator: SemanticValidator) -> None:
     ctx.http.body_chunks_sent = 5
     ctx.http.total_body_bytes = 2 * 1024 * 1024
     validator.validate_complete(ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "SEM-009"]
-    assert matching == []
+    assert_no_violation(ctx, "SEM-009")
 
 
 def test_sem009_single_small_chunk_ok(validator: SemanticValidator) -> None:
@@ -426,8 +413,7 @@ def test_sem009_single_small_chunk_ok(validator: SemanticValidator) -> None:
     ctx.http.body_chunks_sent = 1
     ctx.http.total_body_bytes = 512
     validator.validate_complete(ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "SEM-009"]
-    assert matching == []
+    assert_no_violation(ctx, "SEM-009")
 
 
 # --- SEM-010: Slow body delivery ---
@@ -448,8 +434,7 @@ def test_sem010_fast_body_delivery_ok(validator: SemanticValidator) -> None:
     ctx.http.response_started_at = time.monotonic() - 0.5
     ctx.http.body_complete = True
     validator.validate_complete(ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "SEM-010"]
-    assert matching == []
+    assert_no_violation(ctx, "SEM-010")
 
 
 def test_sem010_body_not_complete_ok(validator: SemanticValidator) -> None:
@@ -458,8 +443,7 @@ def test_sem010_body_not_complete_ok(validator: SemanticValidator) -> None:
     ctx.http.response_started_at = time.monotonic() - 15.0
     ctx.http.body_complete = False
     validator.validate_complete(ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "SEM-010"]
-    assert matching == []
+    assert_no_violation(ctx, "SEM-010")
 
 
 # --- SEM-011: Excessive chunk fragmentation ---
@@ -478,8 +462,7 @@ def test_sem011_few_chunks_ok(validator: SemanticValidator) -> None:
     assert ctx.http is not None
     ctx.http.body_chunks_sent = 10
     validator.validate_complete(ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "SEM-011"]
-    assert matching == []
+    assert_no_violation(ctx, "SEM-011")
 
 
 # --- validate_receive tracks request_received_at ---
@@ -620,22 +603,19 @@ def test_sem013_text_plain_no_charset(validator: SemanticValidator) -> None:
 def test_sem013_text_html_with_charset_ok(validator: SemanticValidator) -> None:
     ctx = make_http_ctx()
     _send_response_start(validator, ctx, [(b"content-type", b"text/html; charset=utf-8")])
-    matching = [v for v in ctx.violations if v.rule_id == "SEM-013"]
-    assert matching == []
+    assert_no_violation(ctx, "SEM-013")
 
 
 def test_sem013_application_json_ok(validator: SemanticValidator) -> None:
     ctx = make_http_ctx()
     _send_response_start(validator, ctx, [(b"content-type", b"application/json")])
-    matching = [v for v in ctx.violations if v.rule_id == "SEM-013"]
-    assert matching == []
+    assert_no_violation(ctx, "SEM-013")
 
 
 def test_sem013_text_event_stream_ok(validator: SemanticValidator) -> None:
     ctx = make_http_ctx()
     _send_response_start(validator, ctx, [(b"content-type", b"text/event-stream")])
-    matching = [v for v in ctx.violations if v.rule_id == "SEM-013"]
-    assert matching == []
+    assert_no_violation(ctx, "SEM-013")
 
 
 def test_sem013_message_contains_media_type(validator: SemanticValidator) -> None:

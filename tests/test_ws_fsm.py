@@ -3,7 +3,7 @@ import pytest
 from asgion.core._types import WSPhase
 from asgion.core.context import ConnectionContext
 from asgion.validators.ws_fsm import WebSocketFSMValidator
-from tests.conftest import assert_no_violations, assert_violation, make_ws_ctx
+from tests.conftest import assert_no_violation, assert_no_violations, assert_violation, make_ws_ctx
 
 
 @pytest.fixture
@@ -135,8 +135,7 @@ def test_wf006_duplicate_accept(validator: WebSocketFSMValidator) -> None:
 def test_wf006_single_accept_passes(validator: WebSocketFSMValidator) -> None:
     ctx = _drive_to_handshake(validator)
     validator.validate_send(ctx, {"type": "websocket.accept"})
-    matching = [v for v in ctx.violations if v.rule_id == "WF-006"]
-    assert matching == []
+    assert_no_violation(ctx, "WF-006")
 
 
 def test_wf007_close_before_accept(validator: WebSocketFSMValidator) -> None:
@@ -149,8 +148,7 @@ def test_wf007_close_before_accept(validator: WebSocketFSMValidator) -> None:
 def test_wf007_close_after_accept_no_info(validator: WebSocketFSMValidator) -> None:
     ctx = _drive_to_connected(validator)
     validator.validate_send(ctx, {"type": "websocket.close", "code": 1000})
-    matching = [v for v in ctx.violations if v.rule_id == "WF-007"]
-    assert matching == []
+    assert_no_violation(ctx, "WF-007")
 
 
 def test_wf008_send_in_closing_state(validator: WebSocketFSMValidator) -> None:
@@ -183,8 +181,7 @@ def test_wf009_denial_start_in_handshake_passes(validator: WebSocketFSMValidator
         ctx,
         {"type": "websocket.http.response.start", "status": 403, "headers": []},
     )
-    matching = [v for v in ctx.violations if v.rule_id == "WF-009"]
-    assert matching == []
+    assert_no_violation(ctx, "WF-009")
     assert ctx.ws is not None
     assert ctx.ws.denial_started is True
     assert ctx.ws.phase == WSPhase.CLOSING
@@ -218,8 +215,7 @@ def test_wf010_denial_body_after_start_passes(validator: WebSocketFSMValidator) 
         ctx,
         {"type": "websocket.http.response.body", "body": b"Forbidden", "more_body": False},
     )
-    matching = [v for v in ctx.violations if v.rule_id == "WF-010"]
-    assert matching == []
+    assert_no_violation(ctx, "WF-010")
 
 
 def test_wf010_denial_body_closes_connection(validator: WebSocketFSMValidator) -> None:
@@ -278,8 +274,7 @@ def test_wf012_receive_after_denial_closed(validator: WebSocketFSMValidator) -> 
 def test_wf012_receive_while_connected_passes(validator: WebSocketFSMValidator) -> None:
     ctx = _drive_to_connected(validator)
     validator.validate_receive(ctx, {"type": "websocket.receive", "bytes": b"data", "text": None})
-    matching = [v for v in ctx.violations if v.rule_id == "WF-012"]
-    assert matching == []
+    assert_no_violation(ctx, "WF-012")
 
 
 def test_full_lifecycle_no_violations(validator: WebSocketFSMValidator) -> None:
@@ -332,8 +327,7 @@ def test_wf011_send_after_denial_start(validator: WebSocketFSMValidator) -> None
 def test_wf011_send_before_denial_passes(validator: WebSocketFSMValidator) -> None:
     ctx = _drive_to_connected(validator)
     validator.validate_send(ctx, {"type": "websocket.send", "text": "hello"})
-    matching = [v for v in ctx.violations if v.rule_id == "WF-011"]
-    assert matching == []
+    assert_no_violation(ctx, "WF-011")
 
 
 def test_state_transitions_connecting_to_handshake(

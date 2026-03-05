@@ -10,7 +10,12 @@ from asgion.spec._checks import (
 )
 from asgion.spec._compiler import compile_spec
 from asgion.spec._protocol import CompiledSpec, EventSpec, ProtocolSpec
-from tests.conftest import assert_no_violations, assert_violation, make_http_ctx
+from tests.conftest import (
+    assert_no_violation,
+    assert_no_violations,
+    assert_violation,
+    make_http_ctx,
+)
 
 
 def _make_spec(**kwargs) -> ProtocolSpec:
@@ -449,8 +454,7 @@ def test_headers_format_no_forbidden_passes() -> None:
     ctx = _make_ctx()
     for fn in compiled.send_dispatch["test.send"]:
         fn(ctx, {"type": "test.send", "headers": [(b"content-type", b"text/html")]})
-    matching = [v for v in ctx.violations if v.rule_id == "TH-003"]
-    assert matching == []
+    assert_no_violation(ctx, "TH-003")
 
 
 def test_multiple_checks_all_fire() -> None:

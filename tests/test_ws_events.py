@@ -4,7 +4,7 @@ import pytest
 
 from asgion.spec import ALL_SPECS
 from asgion.validators.spec_events import SpecEventValidator
-from tests.conftest import assert_no_violations, assert_violation, make_ws_ctx
+from tests.conftest import assert_no_violation, assert_no_violations, assert_violation, make_ws_ctx
 
 
 @pytest.fixture
@@ -36,15 +36,13 @@ def test_we002_receive_neither_present(validator: SpecEventValidator) -> None:
 def test_we002_receive_only_bytes_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_receive(ctx, {"type": "websocket.receive", "bytes": b"hello", "text": None})
-    matching = [v for v in ctx.violations if v.rule_id == "WE-001"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-001")
 
 
 def test_we002_receive_only_text_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_receive(ctx, {"type": "websocket.receive", "bytes": None, "text": "hello"})
-    matching = [v for v in ctx.violations if v.rule_id == "WE-001"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-001")
 
 
 # --- WE-001: receive bytes type ---
@@ -67,15 +65,13 @@ def test_we003_receive_bytes_invalid(validator: SpecEventValidator, bad_bytes: A
 def test_we003_receive_bytes_none_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_receive(ctx, {"type": "websocket.receive", "bytes": None, "text": "ok"})
-    matching = [v for v in ctx.violations if v.rule_id == "WE-002"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-002")
 
 
 def test_we003_receive_bytes_valid_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_receive(ctx, {"type": "websocket.receive", "bytes": b"data", "text": None})
-    matching = [v for v in ctx.violations if v.rule_id == "WE-002"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-002")
 
 
 # --- WE-002: receive text type ---
@@ -98,15 +94,13 @@ def test_we004_receive_text_invalid(validator: SpecEventValidator, bad_text: Any
 def test_we004_receive_text_none_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_receive(ctx, {"type": "websocket.receive", "bytes": b"ok", "text": None})
-    matching = [v for v in ctx.violations if v.rule_id == "WE-003"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-003")
 
 
 def test_we004_receive_text_valid_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_receive(ctx, {"type": "websocket.receive", "bytes": None, "text": "hello"})
-    matching = [v for v in ctx.violations if v.rule_id == "WE-003"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-003")
 
 
 # --- WE-003: disconnect code type ---
@@ -129,8 +123,7 @@ def test_we005_disconnect_code_invalid(validator: SpecEventValidator, bad_code: 
 def test_we005_disconnect_code_valid_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_receive(ctx, {"type": "websocket.disconnect", "code": 1000})
-    matching = [v for v in ctx.violations if v.rule_id == "WE-004"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-004")
 
 
 # --- WE-004: disconnect reason type ---
@@ -171,8 +164,7 @@ def test_we007_disconnect_reason_is_bytes_severity(validator: SpecEventValidator
 def test_we007_disconnect_reason_none_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_receive(ctx, {"type": "websocket.disconnect", "code": 1000, "reason": None})
-    matching = [v for v in ctx.violations if v.rule_id == "WE-005"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-005")
 
 
 def test_we007_disconnect_reason_str_passes(validator: SpecEventValidator) -> None:
@@ -180,15 +172,13 @@ def test_we007_disconnect_reason_str_passes(validator: SpecEventValidator) -> No
     validator.validate_receive(
         ctx, {"type": "websocket.disconnect", "code": 1000, "reason": "going away"}
     )
-    matching = [v for v in ctx.violations if v.rule_id == "WE-005"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-005")
 
 
 def test_we007_disconnect_reason_absent_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_receive(ctx, {"type": "websocket.disconnect", "code": 1000})
-    matching = [v for v in ctx.violations if v.rule_id == "WE-005"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-005")
 
 
 # --- WE-006: accept subprotocol type ---
@@ -220,22 +210,19 @@ def test_we010_accept_subprotocol_is_int_severity(validator: SpecEventValidator)
 def test_we010_accept_subprotocol_none_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_send(ctx, {"type": "websocket.accept", "subprotocol": None})
-    matching = [v for v in ctx.violations if v.rule_id == "WE-006"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-006")
 
 
 def test_we010_accept_subprotocol_str_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_send(ctx, {"type": "websocket.accept", "subprotocol": "graphql-ws"})
-    matching = [v for v in ctx.violations if v.rule_id == "WE-006"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-006")
 
 
 def test_we010_accept_subprotocol_absent_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_send(ctx, {"type": "websocket.accept"})
-    matching = [v for v in ctx.violations if v.rule_id == "WE-006"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-006")
 
 
 # --- WE-005: accept headers validation ---
@@ -265,22 +252,19 @@ def test_we011_accept_headers_valid_passes(validator: SpecEventValidator) -> Non
             "headers": [(b"sec-websocket-protocol", b"graphql-ws")],
         },
     )
-    matching = [v for v in ctx.violations if v.rule_id == "WE-007"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-007")
 
 
 def test_we011_accept_headers_absent_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_send(ctx, {"type": "websocket.accept"})
-    matching = [v for v in ctx.violations if v.rule_id == "WE-007"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-007")
 
 
 def test_we011_accept_headers_empty_list_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_send(ctx, {"type": "websocket.accept", "headers": []})
-    matching = [v for v in ctx.violations if v.rule_id == "WE-007"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-007")
 
 
 # --- WE-008: send bytes/text exclusivity ---
@@ -314,15 +298,13 @@ def test_we012_send_exclusivity_violation(
 def test_we012_send_only_bytes_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_send(ctx, {"type": "websocket.send", "bytes": b"hello", "text": None})
-    matching = [v for v in ctx.violations if v.rule_id == "WE-008"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-008")
 
 
 def test_we012_send_only_text_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_send(ctx, {"type": "websocket.send", "bytes": None, "text": "hello"})
-    matching = [v for v in ctx.violations if v.rule_id == "WE-008"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-008")
 
 
 # --- WE-009: send bytes type ---
@@ -345,15 +327,13 @@ def test_we013_send_bytes_invalid(validator: SpecEventValidator, bad_bytes: Any)
 def test_we013_send_bytes_none_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_send(ctx, {"type": "websocket.send", "bytes": None, "text": "ok"})
-    matching = [v for v in ctx.violations if v.rule_id == "WE-009"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-009")
 
 
 def test_we013_send_bytes_valid_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_send(ctx, {"type": "websocket.send", "bytes": b"binary", "text": None})
-    matching = [v for v in ctx.violations if v.rule_id == "WE-009"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-009")
 
 
 # --- WE-006: send text type ---
@@ -376,15 +356,13 @@ def test_we014_send_text_invalid(validator: SpecEventValidator, bad_text: Any) -
 def test_we014_send_text_none_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_send(ctx, {"type": "websocket.send", "bytes": b"ok", "text": None})
-    matching = [v for v in ctx.violations if v.rule_id == "WE-010"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-010")
 
 
 def test_we014_send_text_valid_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_send(ctx, {"type": "websocket.send", "bytes": None, "text": "hello"})
-    matching = [v for v in ctx.violations if v.rule_id == "WE-010"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-010")
 
 
 # --- WE-007: close code type ---
@@ -408,8 +386,7 @@ def test_we015_close_code_invalid(validator: SpecEventValidator, bad_code: Any) 
 def test_we015_close_code_valid_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_send(ctx, {"type": "websocket.close", "code": 1000})
-    matching = [v for v in ctx.violations if v.rule_id == "WE-011"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-011")
 
 
 # --- WE-008: close reason type ---
@@ -439,8 +416,7 @@ def test_we016_close_reason_is_int_severity(validator: SpecEventValidator) -> No
 def test_we016_close_reason_none_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_send(ctx, {"type": "websocket.close", "code": 1000, "reason": None})
-    matching = [v for v in ctx.violations if v.rule_id == "WE-012"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-012")
 
 
 def test_we016_close_reason_str_passes(validator: SpecEventValidator) -> None:
@@ -448,15 +424,13 @@ def test_we016_close_reason_str_passes(validator: SpecEventValidator) -> None:
     validator.validate_send(
         ctx, {"type": "websocket.close", "code": 1000, "reason": "normal closure"}
     )
-    matching = [v for v in ctx.violations if v.rule_id == "WE-012"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-012")
 
 
 def test_we016_close_reason_absent_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_send(ctx, {"type": "websocket.close", "code": 1000})
-    matching = [v for v in ctx.violations if v.rule_id == "WE-012"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-012")
 
 
 # --- WE-009: denial status type ---
@@ -480,8 +454,7 @@ def test_we020_denial_status_invalid(validator: SpecEventValidator, bad_status: 
 def test_we020_denial_status_valid_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_send(ctx, {"type": "websocket.http.response.start", "status": 403})
-    matching = [v for v in ctx.violations if v.rule_id == "WE-013"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-013")
 
 
 # --- WE-010: denial headers validation ---
@@ -515,15 +488,13 @@ def test_we021_denial_headers_valid_passes(validator: SpecEventValidator) -> Non
             "headers": [(b"content-type", b"text/plain")],
         },
     )
-    matching = [v for v in ctx.violations if v.rule_id == "WE-014"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-014")
 
 
 def test_we021_denial_headers_absent_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_send(ctx, {"type": "websocket.http.response.start", "status": 403})
-    matching = [v for v in ctx.violations if v.rule_id == "WE-014"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-014")
 
 
 def test_we021_denial_headers_empty_list_passes(validator: SpecEventValidator) -> None:
@@ -532,8 +503,7 @@ def test_we021_denial_headers_empty_list_passes(validator: SpecEventValidator) -
         ctx,
         {"type": "websocket.http.response.start", "status": 403, "headers": []},
     )
-    matching = [v for v in ctx.violations if v.rule_id == "WE-014"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-014")
 
 
 # --- WE-011: denial body type ---
@@ -557,8 +527,7 @@ def test_we022_denial_body_invalid(validator: SpecEventValidator, bad_body: Any)
 def test_we022_denial_body_valid_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_send(ctx, {"type": "websocket.http.response.body", "body": b"Forbidden"})
-    matching = [v for v in ctx.violations if v.rule_id == "WE-015"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-015")
 
 
 # --- WE-012: denial more_body type ---
@@ -597,8 +566,7 @@ def test_we023_denial_more_body_valid_true_passes(validator: SpecEventValidator)
         ctx,
         {"type": "websocket.http.response.body", "body": b"x", "more_body": True},
     )
-    matching = [v for v in ctx.violations if v.rule_id == "WE-016"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-016")
 
 
 def test_we023_denial_more_body_valid_false_passes(validator: SpecEventValidator) -> None:
@@ -607,15 +575,13 @@ def test_we023_denial_more_body_valid_false_passes(validator: SpecEventValidator
         ctx,
         {"type": "websocket.http.response.body", "body": b"x", "more_body": False},
     )
-    matching = [v for v in ctx.violations if v.rule_id == "WE-016"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-016")
 
 
 def test_we023_denial_more_body_absent_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_send(ctx, {"type": "websocket.http.response.body", "body": b"x"})
-    matching = [v for v in ctx.violations if v.rule_id == "WE-016"]
-    assert matching == []
+    assert_no_violation(ctx, "WE-016")
 
 
 # --- Valid messages: no violations ---

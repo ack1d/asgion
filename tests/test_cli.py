@@ -363,54 +363,29 @@ class TestCLI:
         text = format_rules_text(ALL_RULES[:5], no_color=True, total=total)
         assert f"5 / {total}" in text
 
-    def test_check_ws_path(self) -> None:
+    @pytest.mark.parametrize(
+        ("prefix_path", "app", "expected_label"),
+        [
+            ("ws:/ws", "good_ws_app", "WS /ws"),
+            ("wss:/ws", "good_ws_app", "WS /ws"),
+            ("http:/api", "good_lifespan_app", "GET /api"),
+        ],
+    )
+    def test_check_protocol_prefix(self, prefix_path: str, app: str, expected_label: str) -> None:
         runner = CliRunner()
         result = runner.invoke(
             cli,
             [
                 "check",
-                "tests._cli_fixtures:good_ws_app",
+                f"tests._cli_fixtures:{app}",
                 "--no-color",
                 "--no-lifespan",
                 "--path",
-                "ws:/ws",
+                prefix_path,
             ],
         )
         assert result.exit_code == 0
-        assert "WS /ws" in result.output
-        assert "No violations found." in result.output
-
-    def test_check_wss_prefix(self) -> None:
-        runner = CliRunner()
-        result = runner.invoke(
-            cli,
-            [
-                "check",
-                "tests._cli_fixtures:good_ws_app",
-                "--no-color",
-                "--no-lifespan",
-                "--path",
-                "wss:/ws",
-            ],
-        )
-        assert result.exit_code == 0
-        assert "WS /ws" in result.output
-
-    def test_check_http_prefix(self) -> None:
-        runner = CliRunner()
-        result = runner.invoke(
-            cli,
-            [
-                "check",
-                "tests._cli_fixtures:good_lifespan_app",
-                "--no-color",
-                "--no-lifespan",
-                "--path",
-                "http:/api",
-            ],
-        )
-        assert result.exit_code == 0
-        assert "GET /api" in result.output
+        assert expected_label in result.output
 
     def test_check_mixed_paths(self) -> None:
         runner = CliRunner()

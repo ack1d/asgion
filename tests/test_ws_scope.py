@@ -4,7 +4,7 @@ import pytest
 
 from asgion.spec import ALL_SPECS
 from asgion.validators.spec_events import SpecEventValidator
-from tests.conftest import assert_no_violations, assert_violation, make_ws_ctx
+from tests.conftest import assert_no_violation, assert_no_violations, assert_violation, make_ws_ctx
 
 
 @pytest.fixture
@@ -40,8 +40,7 @@ def test_ws001_wrong_type(validator: SpecEventValidator) -> None:
 def test_ws001_correct_type(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     validator.validate_scope(ctx, _valid_scope())
-    matching = [v for v in ctx.violations if v.rule_id == "WS-001"]
-    assert matching == []
+    assert_no_violation(ctx, "WS-001")
 
 
 # --- WS-002/003: http_version ---
@@ -93,8 +92,7 @@ def test_ws006_valid_schemes(validator: SpecEventValidator) -> None:
         ctx = make_ws_ctx()
         scope = {**_valid_scope(), "scheme": scheme}
         validator.validate_scope(ctx, scope)
-        matching = [v for v in ctx.violations if v.rule_id == "WS-006"]
-        assert matching == [], f"scheme '{scheme}' should be valid"
+        assert_no_violation(ctx, "WS-006")
 
 
 # --- WS-007/008: path ---
@@ -244,8 +242,7 @@ def test_ws021_subprotocols_valid(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     scope = {**_valid_scope(), "subprotocols": ["graphql-ws", "graphql-transport-ws"]}
     validator.validate_scope(ctx, scope)
-    matching = [v for v in ctx.violations if v.rule_id == "WS-021"]
-    assert matching == []
+    assert_no_violation(ctx, "WS-021")
 
 
 # --- WS-022: client ---
@@ -262,8 +259,7 @@ def test_ws022_client_none_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     scope = {**_valid_scope(), "client": None}
     validator.validate_scope(ctx, scope)
-    matching = [v for v in ctx.violations if v.rule_id == "WS-022"]
-    assert matching == []
+    assert_no_violation(ctx, "WS-022")
 
 
 # --- WS-023: server ---
@@ -280,8 +276,7 @@ def test_ws023_server_none_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     scope = {**_valid_scope(), "server": None}
     validator.validate_scope(ctx, scope)
-    matching = [v for v in ctx.violations if v.rule_id == "WS-023"]
-    assert matching == []
+    assert_no_violation(ctx, "WS-023")
 
 
 # --- WS-024: extensions ---
@@ -298,8 +293,7 @@ def test_ws024_extensions_none_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     scope = {**_valid_scope(), "extensions": None}
     validator.validate_scope(ctx, scope)
-    matching = [v for v in ctx.violations if v.rule_id == "WS-024"]
-    assert matching == []
+    assert_no_violation(ctx, "WS-024")
 
 
 # --- WS-025: state ---
@@ -316,8 +310,7 @@ def test_ws025_state_dict_passes(validator: SpecEventValidator) -> None:
     ctx = make_ws_ctx()
     scope = {**_valid_scope(), "state": {}}
     validator.validate_scope(ctx, scope)
-    matching = [v for v in ctx.violations if v.rule_id == "WS-025"]
-    assert matching == []
+    assert_no_violation(ctx, "WS-025")
 
 
 # --- Full valid scope ---

@@ -69,6 +69,44 @@ def assert_violations(ctx: ConnectionContext, *rule_ids: str) -> list[Violation]
     return [v for v in ctx.violations if v.rule_id in expected]
 
 
+def make_asgi_scope(scope_type: str = "http") -> dict:
+    """Return a minimal valid ASGI scope dict for driving apps end-to-end."""
+    if scope_type == "http":
+        return {
+            "type": "http",
+            "asgi": {"version": "3.0"},
+            "http_version": "1.1",
+            "method": "GET",
+            "scheme": "https",
+            "path": "/",
+            "raw_path": b"/",
+            "query_string": b"",
+            "root_path": "",
+            "headers": [],
+        }
+    if scope_type == "websocket":
+        return {
+            "type": "websocket",
+            "asgi": {"version": "3.0"},
+            "http_version": "1.1",
+            "scheme": "ws",
+            "path": "/ws",
+            "raw_path": b"/ws",
+            "query_string": b"",
+            "root_path": "",
+            "headers": [],
+            "subprotocols": [],
+        }
+    return {"type": scope_type, "asgi": {"version": "3.0"}}
+
+
+def assert_no_violation(ctx: ConnectionContext, *rule_ids: str) -> None:
+    matching = [v for v in ctx.violations if v.rule_id in rule_ids]
+    assert matching == [], (
+        f"Expected no violations for {rule_ids}, got: {[(v.rule_id, v.message) for v in matching]}"
+    )
+
+
 def assert_no_violations(ctx: ConnectionContext) -> None:
     assert ctx.violations == [], (
         f"Expected no violations, got: {[(v.rule_id, v.message) for v in ctx.violations]}"

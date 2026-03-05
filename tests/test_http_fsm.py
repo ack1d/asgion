@@ -3,7 +3,12 @@ import pytest
 from asgion.core._types import HTTPPhase
 from asgion.core.context import ConnectionContext
 from asgion.validators.http_fsm import HTTPFSMValidator
-from tests.conftest import assert_no_violations, assert_violation, make_http_ctx
+from tests.conftest import (
+    assert_no_violation,
+    assert_no_violations,
+    assert_violation,
+    make_http_ctx,
+)
 
 
 @pytest.fixture
@@ -114,8 +119,7 @@ def test_hf003_body_after_start_passes(validator: HTTPFSMValidator) -> None:
     _receive_request(validator, ctx)
     _send_response_start(validator, ctx)
     _send_response_body(validator, ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "HF-002"]
-    assert matching == []
+    assert_no_violation(ctx, "HF-002")
 
 
 def test_hf004_duplicate_response_start(validator: HTTPFSMValidator) -> None:
@@ -131,8 +135,7 @@ def test_hf004_single_response_start_passes(validator: HTTPFSMValidator) -> None
     _receive_request(validator, ctx)
     _send_response_start(validator, ctx)
     _send_response_body(validator, ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "HF-003"]
-    assert matching == []
+    assert_no_violation(ctx, "HF-003")
 
 
 def test_hf006_body_after_complete(validator: HTTPFSMValidator) -> None:
@@ -150,8 +153,7 @@ def test_hf006_chunked_body_no_violation(validator: HTTPFSMValidator) -> None:
     _send_response_start(validator, ctx)
     _send_response_body(validator, ctx, body=b"chunk1", more_body=True)
     _send_response_body(validator, ctx, body=b"chunk2", more_body=False)
-    matching = [v for v in ctx.violations if v.rule_id == "HF-004"]
-    assert matching == []
+    assert_no_violation(ctx, "HF-004")
 
 
 def test_hf007_response_start_after_disconnect(validator: HTTPFSMValidator) -> None:
@@ -176,8 +178,7 @@ def test_hf007_no_disconnect_passes(validator: HTTPFSMValidator) -> None:
     _receive_request(validator, ctx)
     _send_response_start(validator, ctx)
     _send_response_body(validator, ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "HF-005"]
-    assert matching == []
+    assert_no_violation(ctx, "HF-005")
 
 
 def test_hf008_exit_without_body_complete(validator: HTTPFSMValidator) -> None:
@@ -194,8 +195,7 @@ def test_hf008_exit_with_complete_body_passes(validator: HTTPFSMValidator) -> No
     _send_response_start(validator, ctx)
     _send_response_body(validator, ctx, more_body=False)
     validator.validate_complete(ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "HF-006"]
-    assert matching == []
+    assert_no_violation(ctx, "HF-006")
 
 
 def test_hf008_exit_with_chunked_incomplete(validator: HTTPFSMValidator) -> None:
@@ -211,8 +211,7 @@ def test_hf008_exit_before_any_response_passes(validator: HTTPFSMValidator) -> N
     ctx = make_http_ctx()
     _receive_request(validator, ctx)
     validator.validate_complete(ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "HF-006"]
-    assert matching == []
+    assert_no_violation(ctx, "HF-006")
 
 
 def test_hf008_disconnected_before_body_passes(validator: HTTPFSMValidator) -> None:
@@ -221,8 +220,7 @@ def test_hf008_disconnected_before_body_passes(validator: HTTPFSMValidator) -> N
     _send_response_start(validator, ctx)
     _receive_disconnect(validator, ctx)
     validator.validate_complete(ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "HF-006"]
-    assert matching == []
+    assert_no_violation(ctx, "HF-006")
 
 
 def test_hf010_trailers_flag_but_no_trailers_sent(validator: HTTPFSMValidator) -> None:
@@ -241,8 +239,7 @@ def test_hf010_trailers_flag_with_trailers_passes(validator: HTTPFSMValidator) -
     _send_response_body(validator, ctx)
     _send_trailers(validator, ctx)
     validator.validate_complete(ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "HF-008"]
-    assert matching == []
+    assert_no_violation(ctx, "HF-008")
 
 
 def test_hf010_no_trailers_flag_passes(validator: HTTPFSMValidator) -> None:
@@ -251,8 +248,7 @@ def test_hf010_no_trailers_flag_passes(validator: HTTPFSMValidator) -> None:
     _send_response_start(validator, ctx, trailers=False)
     _send_response_body(validator, ctx)
     validator.validate_complete(ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "HF-008"]
-    assert matching == []
+    assert_no_violation(ctx, "HF-008")
 
 
 def test_hf011_trailers_without_flag(validator: HTTPFSMValidator) -> None:
@@ -270,8 +266,7 @@ def test_hf011_trailers_with_flag_passes(validator: HTTPFSMValidator) -> None:
     _send_response_start(validator, ctx, trailers=True)
     _send_response_body(validator, ctx)
     _send_trailers(validator, ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "HF-009"]
-    assert matching == []
+    assert_no_violation(ctx, "HF-009")
 
 
 def test_hf014_head_response_with_body(validator: HTTPFSMValidator) -> None:
@@ -288,8 +283,7 @@ def test_hf014_head_response_empty_body_passes(validator: HTTPFSMValidator) -> N
     _receive_request(validator, ctx)
     _send_response_start(validator, ctx)
     _send_response_body(validator, ctx, body=b"")
-    matching = [v for v in ctx.violations if v.rule_id == "HF-011"]
-    assert matching == []
+    assert_no_violation(ctx, "HF-011")
 
 
 def test_hf014_get_response_with_body_passes(validator: HTTPFSMValidator) -> None:
@@ -297,8 +291,7 @@ def test_hf014_get_response_with_body_passes(validator: HTTPFSMValidator) -> Non
     _receive_request(validator, ctx)
     _send_response_start(validator, ctx)
     _send_response_body(validator, ctx, body=b"body content")
-    matching = [v for v in ctx.violations if v.rule_id == "HF-011"]
-    assert matching == []
+    assert_no_violation(ctx, "HF-011")
 
 
 def test_hf015_status_204_with_body(validator: HTTPFSMValidator) -> None:
@@ -331,8 +324,7 @@ def test_hf015_status_200_with_body_passes(validator: HTTPFSMValidator) -> None:
     _receive_request(validator, ctx)
     _send_response_start(validator, ctx, status=200)
     _send_response_body(validator, ctx, body=b"OK")
-    matching = [v for v in ctx.violations if v.rule_id == "HF-012"]
-    assert matching == []
+    assert_no_violation(ctx, "HF-012")
 
 
 def test_hf015_status_204_empty_body_no_violation(validator: HTTPFSMValidator) -> None:
@@ -356,8 +348,7 @@ def test_hf001_response_start_sent_passes(validator: HTTPFSMValidator) -> None:
     _send_response_start(validator, ctx)
     _send_response_body(validator, ctx)
     validator.validate_complete(ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "HF-001"]
-    assert matching == []
+    assert_no_violation(ctx, "HF-001")
 
 
 def test_hf001_disconnected_no_violation(validator: HTTPFSMValidator) -> None:
@@ -365,8 +356,7 @@ def test_hf001_disconnected_no_violation(validator: HTTPFSMValidator) -> None:
     _receive_request(validator, ctx)
     _receive_disconnect(validator, ctx)
     validator.validate_complete(ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "HF-001"]
-    assert matching == []
+    assert_no_violation(ctx, "HF-001")
 
 
 def test_hf009_receive_after_request_body_complete(validator: HTTPFSMValidator) -> None:
@@ -390,8 +380,7 @@ def test_hf009_chunked_request_in_progress_passes(validator: HTTPFSMValidator) -
     ctx = make_http_ctx()
     _receive_request(validator, ctx, more_body=True)
     _receive_request(validator, ctx, more_body=True)
-    matching = [v for v in ctx.violations if v.rule_id == "HF-007"]
-    assert matching == []
+    assert_no_violation(ctx, "HF-007")
 
 
 def test_hf012_streaming_body_fires_once(validator: HTTPFSMValidator) -> None:
@@ -411,8 +400,7 @@ def test_hf012_no_streaming_passes(validator: HTTPFSMValidator) -> None:
     _receive_request(validator, ctx)
     _send_response_start(validator, ctx)
     _send_response_body(validator, ctx, body=b"full body", more_body=False)
-    matching = [v for v in ctx.violations if v.rule_id == "HF-010"]
-    assert matching == []
+    assert_no_violation(ctx, "HF-010")
 
 
 def test_phase_transitions_happy_path(validator: HTTPFSMValidator) -> None:

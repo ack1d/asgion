@@ -4,7 +4,12 @@ import pytest
 
 from asgion.core.context import ConnectionContext
 from asgion.validators.general import _MAX_DEPTH, GeneralValidator
-from tests.conftest import assert_no_violations, assert_violation, make_http_ctx
+from tests.conftest import (
+    assert_no_violation,
+    assert_no_violations,
+    assert_violation,
+    make_http_ctx,
+)
 
 
 @pytest.fixture
@@ -40,8 +45,7 @@ def test_g001_scope_not_dict(validator: GeneralValidator, scope: object) -> None
 def test_g001_scope_dict_passes(validator: GeneralValidator) -> None:
     ctx = _make_ctx()
     validator.validate_scope(ctx, {"type": "http", "asgi": {"version": "3.0"}})
-    matching = [v for v in ctx.violations if v.rule_id == "G-001"]
-    assert matching == []
+    assert_no_violation(ctx, "G-001")
 
 
 # --- G-002: scope must contain 'type' ---
@@ -63,8 +67,7 @@ def test_g002_scope_missing_type(validator: GeneralValidator, scope: dict) -> No
 def test_g002_scope_has_type_passes(validator: GeneralValidator) -> None:
     ctx = _make_ctx()
     validator.validate_scope(ctx, {"type": "http", "asgi": {"version": "3.0"}})
-    matching = [v for v in ctx.violations if v.rule_id == "G-002"]
-    assert matching == []
+    assert_no_violation(ctx, "G-002")
 
 
 # --- G-003: scope['type'] must be a str ---
@@ -88,8 +91,7 @@ def test_g003_scope_type_not_str(validator: GeneralValidator, type_val: object) 
 def test_g003_scope_type_str_passes(validator: GeneralValidator) -> None:
     ctx = _make_ctx()
     validator.validate_scope(ctx, {"type": "http", "asgi": {"version": "3.0"}})
-    matching = [v for v in ctx.violations if v.rule_id == "G-003"]
-    assert matching == []
+    assert_no_violation(ctx, "G-003")
 
 
 # --- G-004: scope type must be known ---
@@ -119,8 +121,7 @@ def test_g004_scope_type_unknown(validator: GeneralValidator, type_val: str) -> 
 def test_g004_scope_type_valid_passes(validator: GeneralValidator, type_val: str) -> None:
     ctx = _make_ctx()
     validator.validate_scope(ctx, {"type": type_val, "asgi": {"version": "3.0"}})
-    matching = [v for v in ctx.violations if v.rule_id == "G-004"]
-    assert matching == []
+    assert_no_violation(ctx, "G-004")
 
 
 # --- G-005: message must be a dict ---
@@ -150,8 +151,7 @@ def test_g005_receive_message_not_dict(validator: GeneralValidator) -> None:
 def test_g005_message_dict_passes(validator: GeneralValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_send(ctx, {"type": "http.response.start", "status": 200})
-    matching = [v for v in ctx.violations if v.rule_id == "G-005"]
-    assert matching == []
+    assert_no_violation(ctx, "G-005")
 
 
 # --- G-006: message must contain 'type' ---
@@ -174,8 +174,7 @@ def test_g006_message_missing_type(validator: GeneralValidator, method: str, mes
 def test_g006_message_has_type_passes(validator: GeneralValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_send(ctx, {"type": "http.response.start"})
-    matching = [v for v in ctx.violations if v.rule_id == "G-006"]
-    assert matching == []
+    assert_no_violation(ctx, "G-006")
 
 
 # --- G-007: message['type'] must be a str ---
@@ -201,8 +200,7 @@ def test_g007_message_type_not_str(
 def test_g007_message_type_str_passes(validator: GeneralValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_send(ctx, {"type": "http.response.start"})
-    matching = [v for v in ctx.violations if v.rule_id == "G-007"]
-    assert matching == []
+    assert_no_violation(ctx, "G-007")
 
 
 # --- G-008: NaN values forbidden ---
@@ -249,8 +247,7 @@ def test_g008_nan(validator: GeneralValidator, method: str, message: dict) -> No
 def test_g008_valid_float_passes(validator: GeneralValidator, value: float) -> None:
     ctx = make_http_ctx()
     validator.validate_send(ctx, {"type": "test", "value": value})
-    matching = [v for v in ctx.violations if v.rule_id == "G-008"]
-    assert matching == []
+    assert_no_violation(ctx, "G-008")
 
 
 # --- G-009: Infinity values forbidden ---
@@ -295,8 +292,7 @@ def test_g009_infinity(validator: GeneralValidator, method: str, message: dict) 
 def test_g009_regular_float_passes(validator: GeneralValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_send(ctx, {"type": "test", "value": 99.99})
-    matching = [v for v in ctx.violations if v.rule_id == "G-009"]
-    assert matching == []
+    assert_no_violation(ctx, "G-009")
 
 
 # --- G-010: forbidden types ---
@@ -358,8 +354,7 @@ def test_g010_forbidden(validator: GeneralValidator, method: str, message: dict)
 def test_g010_allowed_passes(validator: GeneralValidator, message: dict) -> None:
     ctx = make_http_ctx()
     validator.validate_send(ctx, message)
-    matching = [v for v in ctx.violations if v.rule_id == "G-010"]
-    assert matching == []
+    assert_no_violation(ctx, "G-010")
 
 
 # --- G-011: scope must contain 'asgi' ---
@@ -374,8 +369,7 @@ def test_g011_scope_missing_asgi(validator: GeneralValidator) -> None:
 def test_g011_scope_has_asgi_passes(validator: GeneralValidator) -> None:
     ctx = _make_ctx()
     validator.validate_scope(ctx, {"type": "http", "asgi": {"version": "3.0"}})
-    matching = [v for v in ctx.violations if v.rule_id == "G-011"]
-    assert matching == []
+    assert_no_violation(ctx, "G-011")
 
 
 # --- G-012: asgi['version'] must be '2.0' or '3.0' ---
@@ -406,8 +400,7 @@ def test_g012_asgi_version_invalid(validator: GeneralValidator, asgi: dict) -> N
 def test_g012_asgi_version_valid_passes(validator: GeneralValidator, version: str) -> None:
     ctx = _make_ctx()
     validator.validate_scope(ctx, {"type": "http", "asgi": {"version": version}})
-    matching = [v for v in ctx.violations if v.rule_id == "G-012"]
-    assert matching == []
+    assert_no_violation(ctx, "G-012")
 
 
 # --- G-013: asgi['spec_version'] should be a str ---
@@ -453,15 +446,13 @@ def test_g013_spec_version_valid_passes(validator: GeneralValidator, spec_versio
         ctx,
         {"type": "http", "asgi": {"version": "3.0", "spec_version": spec_version}},
     )
-    matching = [v for v in ctx.violations if v.rule_id == "G-013"]
-    assert matching == []
+    assert_no_violation(ctx, "G-013")
 
 
 def test_g013_spec_version_absent_passes(validator: GeneralValidator) -> None:
     ctx = _make_ctx()
     validator.validate_scope(ctx, {"type": "http", "asgi": {"version": "3.0"}})
-    matching = [v for v in ctx.violations if v.rule_id == "G-013"]
-    assert matching == []
+    assert_no_violation(ctx, "G-013")
 
 
 # --- G-014: nesting depth ---
@@ -516,8 +507,7 @@ def test_g014_nesting_exceeds_max_is_warning(validator: GeneralValidator) -> Non
 def test_g014_nesting_ok_passes(validator: GeneralValidator, message: dict) -> None:
     ctx = make_http_ctx()
     validator.validate_send(ctx, message)
-    matching = [v for v in ctx.violations if v.rule_id == "G-014"]
-    assert matching == []
+    assert_no_violation(ctx, "G-014")
 
 
 # --- Valid scopes / messages (no violations at all) ---

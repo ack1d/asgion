@@ -5,7 +5,12 @@ from asgion.spec import ALL_SPECS
 from asgion.validators.extension import ExtensionValidator
 from asgion.validators.http_fsm import HTTPFSMValidator
 from asgion.validators.spec_events import SpecEventValidator
-from tests.conftest import assert_no_violations, assert_violation, make_http_ctx
+from tests.conftest import (
+    assert_no_violation,
+    assert_no_violations,
+    assert_violation,
+    make_http_ctx,
+)
 
 
 @pytest.fixture
@@ -32,8 +37,7 @@ def test_he020_trailers_valid_headers(validator: SpecEventValidator) -> None:
     validator.validate_send(
         ctx, {"type": "http.response.trailers", "headers": [(b"checksum", b"abc")]}
     )
-    matching = [v for v in ctx.violations if v.rule_id == "HE-015"]
-    assert matching == []
+    assert_no_violation(ctx, "HE-015")
 
 
 # --- HE-016/022/023: http.response.push ---
@@ -160,8 +164,7 @@ def test_ex009_push_without_extension(ext_validator: ExtensionValidator) -> None
 def test_ex009_push_with_extension_passes(ext_validator: ExtensionValidator) -> None:
     ctx = _make_ext_ctx("http.response.push")
     ext_validator.validate_send(ctx, {"type": "http.response.push", "path": "/x", "headers": []})
-    matching = [v for v in ctx.violations if v.rule_id == "EX-009"]
-    assert matching == []
+    assert_no_violation(ctx, "EX-009")
 
 
 def test_ex009_pathsend_without_extension(ext_validator: ExtensionValidator) -> None:
@@ -211,8 +214,7 @@ def test_ex010_early_hint_before_response_start_passes(
 ) -> None:
     ctx = _make_ext_ctx("http.response.early_hint")
     ext_validator.validate_send(ctx, {"type": "http.response.early_hint", "headers": []})
-    matching = [v for v in ctx.violations if v.rule_id == "EX-010"]
-    assert matching == []
+    assert_no_violation(ctx, "EX-010")
 
 
 # --- EX-011: debug after response.start ---
@@ -232,5 +234,4 @@ def test_ex011_debug_before_response_start_passes(
 ) -> None:
     ctx = _make_ext_ctx("http.response.debug")
     ext_validator.validate_send(ctx, {"type": "http.response.debug", "info": {}})
-    matching = [v for v in ctx.violations if v.rule_id == "EX-011"]
-    assert matching == []
+    assert_no_violation(ctx, "EX-011")

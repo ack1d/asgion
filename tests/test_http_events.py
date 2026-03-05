@@ -2,7 +2,12 @@ import pytest
 
 from asgion.spec import ALL_SPECS
 from asgion.validators.spec_events import SpecEventValidator
-from tests.conftest import assert_no_violations, assert_violation, make_http_ctx
+from tests.conftest import (
+    assert_no_violation,
+    assert_no_violations,
+    assert_violation,
+    make_http_ctx,
+)
 
 
 @pytest.fixture
@@ -23,8 +28,7 @@ def test_he001_missing_body(validator: SpecEventValidator) -> None:
 def test_he001_body_present(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_receive(ctx, {"type": "http.request", "body": b""})
-    he001 = [v for v in ctx.violations if v.rule_id == "HE-001"]
-    assert he001 == []
+    assert_no_violation(ctx, "HE-001")
 
 
 # --- HE-002: body must be bytes ---
@@ -48,8 +52,7 @@ def test_he002_body_not_bytes(validator: SpecEventValidator, body: object) -> No
 def test_he002_body_is_bytes(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_receive(ctx, {"type": "http.request", "body": b"hello"})
-    he002 = [v for v in ctx.violations if v.rule_id == "HE-002"]
-    assert he002 == []
+    assert_no_violation(ctx, "HE-002")
 
 
 # --- HE-003: more_body must be bool ---
@@ -80,8 +83,7 @@ def test_he003_more_body_not_bool(validator: SpecEventValidator, more_body: obje
 def test_he003_more_body_valid(validator: SpecEventValidator, msg: dict[str, object]) -> None:
     ctx = make_http_ctx()
     validator.validate_receive(ctx, msg)
-    he003 = [v for v in ctx.violations if v.rule_id == "HE-003"]
-    assert he003 == []
+    assert_no_violation(ctx, "HE-003")
 
 
 # --- HE-004: invalid receive event type ---
@@ -113,8 +115,7 @@ def test_he005_invalid_receive_type(validator: SpecEventValidator, msg: dict[str
 def test_he005_valid_receive_type(validator: SpecEventValidator, msg: dict[str, object]) -> None:
     ctx = make_http_ctx()
     validator.validate_receive(ctx, msg)
-    he005 = [v for v in ctx.violations if v.rule_id == "HE-004"]
-    assert he005 == []
+    assert_no_violation(ctx, "HE-004")
 
 
 # --- HE-004: missing status ---
@@ -130,8 +131,7 @@ def test_he010_missing_status(validator: SpecEventValidator) -> None:
 def test_he010_status_present(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx()
     validator.validate_send(ctx, {"type": "http.response.start", "status": 200, "headers": []})
-    he010 = [v for v in ctx.violations if v.rule_id == "HE-005"]
-    assert he010 == []
+    assert_no_violation(ctx, "HE-005")
 
 
 # --- HE-006: status must be int ---
@@ -161,8 +161,7 @@ def test_he011_status_is_int(validator: SpecEventValidator) -> None:
         ctx,
         {"type": "http.response.start", "status": 404, "headers": []},
     )
-    he011 = [v for v in ctx.violations if v.rule_id == "HE-006"]
-    assert he011 == []
+    assert_no_violation(ctx, "HE-006")
 
 
 # --- HE-007: status range ---
@@ -200,8 +199,7 @@ def test_he012_status_not_int_skipped(validator: SpecEventValidator) -> None:
         ctx,
         {"type": "http.response.start", "status": "200", "headers": []},
     )
-    he012 = [v for v in ctx.violations if v.rule_id == "HE-007"]
-    assert he012 == []
+    assert_no_violation(ctx, "HE-007")
 
 
 # --- HE-008: header validation ---
@@ -241,8 +239,7 @@ def test_he013_valid_headers(validator: SpecEventValidator, headers: object) -> 
         ctx,
         {"type": "http.response.start", "status": 200, "headers": headers},
     )
-    he013 = [v for v in ctx.violations if v.rule_id == "HE-008"]
-    assert he013 == []
+    assert_no_violation(ctx, "HE-008")
 
 
 # --- HE-009: uppercase headers ---
@@ -279,8 +276,7 @@ def test_he014_lowercase_header(validator: SpecEventValidator) -> None:
             "headers": [(b"content-type", b"text/plain")],
         },
     )
-    he014 = [v for v in ctx.violations if v.rule_id == "HE-009"]
-    assert he014 == []
+    assert_no_violation(ctx, "HE-009")
 
 
 # --- HE-005: transfer-encoding ---
@@ -323,8 +319,7 @@ def test_he015_no_transfer_encoding(validator: SpecEventValidator) -> None:
             "headers": [(b"content-type", b"text/html")],
         },
     )
-    he015 = [v for v in ctx.violations if v.rule_id == "HE-010"]
-    assert he015 == []
+    assert_no_violation(ctx, "HE-010")
 
 
 # --- HE-006: trailers must be bool ---
@@ -382,8 +377,7 @@ def test_he016_trailers_not_bool(validator: SpecEventValidator, trailers: object
 def test_he016_trailers_valid(validator: SpecEventValidator, msg: dict[str, object]) -> None:
     ctx = make_http_ctx()
     validator.validate_send(ctx, msg)
-    he016 = [v for v in ctx.violations if v.rule_id == "HE-011"]
-    assert he016 == []
+    assert_no_violation(ctx, "HE-011")
 
 
 # --- HE-007: response body must be bytes ---
@@ -414,8 +408,7 @@ def test_he017_body_not_bytes(validator: SpecEventValidator, body: object) -> No
 def test_he017_body_valid(validator: SpecEventValidator, msg: dict[str, object]) -> None:
     ctx = make_http_ctx()
     validator.validate_send(ctx, msg)
-    he017 = [v for v in ctx.violations if v.rule_id == "HE-012"]
-    assert he017 == []
+    assert_no_violation(ctx, "HE-012")
 
 
 # --- HE-008: response more_body must be bool ---
@@ -454,8 +447,7 @@ def test_he018_more_body_not_bool(validator: SpecEventValidator, more_body: obje
 def test_he018_more_body_valid(validator: SpecEventValidator, msg: dict[str, object]) -> None:
     ctx = make_http_ctx()
     validator.validate_send(ctx, msg)
-    he018 = [v for v in ctx.violations if v.rule_id == "HE-013"]
-    assert he018 == []
+    assert_no_violation(ctx, "HE-013")
 
 
 # --- HE-009: invalid send event type ---
@@ -495,8 +487,7 @@ def test_he019_invalid_send_type(validator: SpecEventValidator, msg: dict[str, o
 def test_he019_valid_send_type(validator: SpecEventValidator, msg: dict[str, object]) -> None:
     ctx = make_http_ctx()
     validator.validate_send(ctx, msg)
-    he019 = [v for v in ctx.violations if v.rule_id == "HE-014"]
-    assert he019 == []
+    assert_no_violation(ctx, "HE-014")
 
 
 # --- Valid full messages ---
@@ -583,12 +574,10 @@ def test_he001_and_he002_both_fire_when_body_missing(
     ctx = make_http_ctx()
     validator.validate_receive(ctx, {"type": "http.request"})
     assert_violation(ctx, "HE-001")
-    he002 = [v for v in ctx.violations if v.rule_id == "HE-002"]
-    assert he002 == []
+    assert_no_violation(ctx, "HE-002")
 
 
 def test_disabled_rule(validator: SpecEventValidator) -> None:
     ctx = make_http_ctx(disabled_rules=frozenset({"HE-002"}))
     validator.validate_receive(ctx, {"type": "http.request", "body": "not_bytes"})
-    he002 = [v for v in ctx.violations if v.rule_id == "HE-002"]
-    assert he002 == []
+    assert_no_violation(ctx, "HE-002")

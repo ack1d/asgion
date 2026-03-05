@@ -4,27 +4,11 @@ import pytest
 
 from asgion import Inspector
 from asgion.core.config import AsgionConfig
-
-
-def _make_scope(scope_type: str = "http") -> dict:
-    if scope_type == "http":
-        return {
-            "type": "http",
-            "asgi": {"version": "3.0"},
-            "http_version": "1.1",
-            "method": "GET",
-            "scheme": "https",
-            "path": "/test",
-            "raw_path": b"/test",
-            "query_string": b"",
-            "root_path": "",
-            "headers": [],
-        }
-    return {"type": scope_type, "asgi": {"version": "3.0"}}
+from tests.conftest import make_asgi_scope
 
 
 async def _run_http(inspector: Inspector) -> None:
-    scope = _make_scope("http")
+    scope = make_asgi_scope("http")
     sent = False
 
     async def receive():
@@ -90,14 +74,6 @@ async def test_inspector_accumulates_across_connections() -> None:
     assert len(inspector.violations) > count_after_first
 
 
-async def test_inspector_asgi_app_attribute() -> None:
-    async def app(scope, receive, send):
-        pass
-
-    inspector = Inspector(app)
-    assert callable(inspector.asgi_app)
-
-
 async def test_inspector_is_callable_as_asgi_app() -> None:
     async def app(scope, receive, send):
         await receive()
@@ -112,7 +88,7 @@ async def test_inspector_is_callable_as_asgi_app() -> None:
 
     inspector = Inspector(app)
     # Inspector itself must be callable (ASGI app interface)
-    scope = _make_scope("http")
+    scope = make_asgi_scope("http")
     sent_flag = False
 
     async def receive():
@@ -180,7 +156,7 @@ async def test_inspector_strict_raises() -> None:
     from asgion import ASGIProtocolError
 
     inspector = Inspector(app, strict=True)
-    scope = _make_scope("http")
+    scope = make_asgi_scope("http")
 
     async def receive():
         return {"type": "http.request", "body": b"", "more_body": False}
@@ -266,7 +242,7 @@ async def test_inspect_function_still_works() -> None:
     wrapped = inspect(app, on_violation=violations.append)
     assert callable(wrapped)
     await _run_http(Inspector(app))  # just ensure no error
-    scope = _make_scope("http")
+    scope = make_asgi_scope("http")
 
     async def receive():
         return {"type": "http.request", "body": b"", "more_body": False}

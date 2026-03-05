@@ -3,7 +3,12 @@ import pytest
 from asgion.core._types import LifespanPhase
 from asgion.core.context import ConnectionContext
 from asgion.validators.lifespan_fsm import LifespanFSMValidator
-from tests.conftest import assert_no_violations, assert_violation, make_lifespan_ctx
+from tests.conftest import (
+    assert_no_violation,
+    assert_no_violations,
+    assert_violation,
+    make_lifespan_ctx,
+)
 
 
 @pytest.fixture
@@ -135,8 +140,7 @@ def test_lf003_duplicate_startup_complete(validator: LifespanFSMValidator) -> No
 def test_lf003_single_startup_complete_passes(validator: LifespanFSMValidator) -> None:
     ctx = make_lifespan_ctx()
     _drive_to_started(validator, ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "LF-003"]
-    assert matching == []
+    assert_no_violation(ctx, "LF-003")
 
 
 def test_lf004_failed_after_complete(validator: LifespanFSMValidator) -> None:
@@ -158,16 +162,14 @@ def test_lf004_complete_after_failed(validator: LifespanFSMValidator) -> None:
 def test_lf004_single_complete_passes(validator: LifespanFSMValidator) -> None:
     ctx = make_lifespan_ctx()
     _drive_to_started(validator, ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "LF-004"]
-    assert matching == []
+    assert_no_violation(ctx, "LF-004")
 
 
 def test_lf004_single_failed_passes(validator: LifespanFSMValidator) -> None:
     ctx = make_lifespan_ctx()
     _drive_to_starting(validator, ctx)
     validator.validate_send(ctx, {"type": "lifespan.startup.failed"})
-    matching = [v for v in ctx.violations if v.rule_id == "LF-004"]
-    assert matching == []
+    assert_no_violation(ctx, "LF-004")
 
 
 def test_lf005_shutdown_in_waiting_state(validator: LifespanFSMValidator) -> None:
@@ -271,16 +273,14 @@ def test_lf007_complete_after_failed(validator: LifespanFSMValidator) -> None:
 def test_lf007_single_shutdown_complete_passes(validator: LifespanFSMValidator) -> None:
     ctx = make_lifespan_ctx()
     _drive_to_done(validator, ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "LF-007"]
-    assert matching == []
+    assert_no_violation(ctx, "LF-007")
 
 
 def test_lf007_single_shutdown_failed_passes(validator: LifespanFSMValidator) -> None:
     ctx = make_lifespan_ctx()
     _drive_to_shutting_down(validator, ctx)
     validator.validate_send(ctx, {"type": "lifespan.shutdown.failed"})
-    matching = [v for v in ctx.violations if v.rule_id == "LF-007"]
-    assert matching == []
+    assert_no_violation(ctx, "LF-007")
 
 
 def test_lf008_exit_during_shutdown_without_response(
@@ -353,8 +353,7 @@ def test_lf009_exit_after_startup_complete_passes(
     ctx = make_lifespan_ctx()
     _drive_to_started(validator, ctx)
     validator.validate_complete(ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "LF-009"]
-    assert matching == []
+    assert_no_violation(ctx, "LF-009")
 
 
 def test_lf009_exit_after_startup_failed_passes(
@@ -364,8 +363,7 @@ def test_lf009_exit_after_startup_failed_passes(
     _drive_to_starting(validator, ctx)
     validator.validate_send(ctx, {"type": "lifespan.startup.failed"})
     validator.validate_complete(ctx)
-    matching = [v for v in ctx.violations if v.rule_id == "LF-009"]
-    assert matching == []
+    assert_no_violation(ctx, "LF-009")
 
 
 def test_lf010_state_dict_present(validator: LifespanFSMValidator) -> None:
@@ -380,18 +378,16 @@ def test_lf010_state_dict_absent_passes(validator: LifespanFSMValidator) -> None
     ctx = make_lifespan_ctx()
     assert "state" not in ctx.scope
     validator.validate_scope(ctx, ctx.scope)
-    matching = [v for v in ctx.violations if v.rule_id == "LF-010"]
-    assert matching == []
+    assert_no_violation(ctx, "LF-010")
 
 
 def test_lf010_non_lifespan_scope_ignored(validator: LifespanFSMValidator) -> None:
-    from tests.conftest import make_http_ctx
+    from tests.conftest import assert_no_violation, make_http_ctx
 
     ctx = make_http_ctx()
     scope = {**ctx.scope, "state": {}}
     validator.validate_scope(ctx, scope)
-    matching = [v for v in ctx.violations if v.rule_id == "LF-010"]
-    assert matching == []
+    assert_no_violation(ctx, "LF-010")
 
 
 def test_phase_transitions_happy_path(validator: LifespanFSMValidator) -> None:

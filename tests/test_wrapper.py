@@ -1,43 +1,12 @@
 import asyncio
 
-import pytest
-
 from asgion import ASGIProtocolError, Violation, inspect
-
-
-def _make_scope(scope_type: str = "http") -> dict:
-    if scope_type == "http":
-        return {
-            "type": "http",
-            "asgi": {"version": "3.0"},
-            "http_version": "1.1",
-            "method": "GET",
-            "scheme": "https",
-            "path": "/test",
-            "raw_path": b"/test",
-            "query_string": b"",
-            "root_path": "",
-            "headers": [],
-        }
-    if scope_type == "websocket":
-        return {
-            "type": "websocket",
-            "asgi": {"version": "3.0"},
-            "http_version": "1.1",
-            "scheme": "ws",
-            "path": "/ws",
-            "raw_path": b"/ws",
-            "query_string": b"",
-            "root_path": "",
-            "headers": [],
-            "subprotocols": [],
-        }
-    return {"type": scope_type, "asgi": {"version": "3.0"}}
+from tests.conftest import make_asgi_scope
 
 
 async def _run(app, scope_type: str = "http", **kwargs) -> list[Violation]:
     violations: list[Violation] = []
-    scope = _make_scope(scope_type)
+    scope = make_asgi_scope(scope_type)
     request_sent = False
 
     async def receive():
@@ -73,22 +42,6 @@ async def _run(app, scope_type: str = "http", **kwargs) -> list[Violation]:
     return violations
 
 
-async def test_correct_http_app_no_violations():
-    async def app(scope, receive, send):
-        await receive()
-        await send(
-            {
-                "type": "http.response.start",
-                "status": 200,
-                "headers": [(b"content-type", b"text/plain; charset=utf-8")],
-            }
-        )
-        await send({"type": "http.response.body", "body": b"OK", "more_body": False})
-
-    violations = await _run(app)
-    assert violations == []
-
-
 async def test_unknown_scope_type_passes_through():
     called = False
 
@@ -114,55 +67,8 @@ async def test_exclude_paths():
         await receive()
         await send({"type": "http.response.body", "body": b"oops"})
 
-    violations = await _run(app, exclude_paths=["/test"])
+    violations = await _run(app, exclude_paths=["/"])
     assert violations == []
-
-
-async def test_on_violation_callback_fires():
-    async def app(scope, receive, send):
-        await receive()
-        await send({"type": "http.response.start", "status": "bad", "headers": []})
-        await send({"type": "http.response.body", "body": b"OK", "more_body": False})
-
-    violations = await _run(app)
-    assert len(violations) > 0
-    assert any(v.rule_id == "HE-006" for v in violations)
-
-
-async def test_strict_mode_raises():
-    async def app(scope, receive, send):
-        await receive()
-        await send({"type": "http.response.start", "headers": []})
-        await send({"type": "http.response.body", "body": b"OK", "more_body": False})
-
-    scope = _make_scope("http")
-    request_sent = False
-
-    async def receive():
-        nonlocal request_sent
-        if not request_sent:
-            request_sent = True
-            return {"type": "http.request", "body": b"", "more_body": False}
-        await asyncio.sleep(999)
-        return {"type": "http.disconnect"}
-
-    async def send(msg):
-        pass
-
-    wrapped = inspect(app, strict=True)
-    with pytest.raises(ASGIProtocolError) as exc_info:
-        await asyncio.wait_for(wrapped(scope, receive, send), timeout=2.0)
-    assert len(exc_info.value.violations) > 0
-
-
-async def test_exclude_rules_suppresses():
-    async def app(scope, receive, send):
-        await receive()
-        await send({"type": "http.response.start", "status": 999, "headers": []})
-        await send({"type": "http.response.body", "body": b"OK", "more_body": False})
-
-    violations = await _run(app, exclude_rules={"HE-007"})
-    assert not any(v.rule_id == "HE-007" for v in violations)
 
 
 async def test_websocket_through_wrapper():
@@ -226,7 +132,7 @@ async def test_validator_exception_does_not_crash_app():
         await send({"type": "http.response.start", "status": 200, "headers": []})
         await send({"type": "http.response.body", "body": b"OK", "more_body": False})
 
-    scope = _make_scope("http")
+    scope = make_asgi_scope("http")
     request_sent = False
 
     async def receive():

@@ -18,6 +18,7 @@ from asgion.core.config import (
     load_user_profiles,
 )
 from asgion.core.rule import Rule
+from tests.conftest import make_asgi_scope
 
 # Helpers
 
@@ -25,23 +26,6 @@ _PERF_RULE = Rule(id="X-001", severity=Severity.PERF, summary="perf rule", layer
 _INFO_RULE = Rule(id="X-002", severity=Severity.INFO, summary="info rule", layer="http.fsm")
 _WARN_RULE = Rule(id="X-003", severity=Severity.WARNING, summary="warn rule", layer="http.semantic")
 _ERR_RULE = Rule(id="X-004", severity=Severity.ERROR, summary="error rule", layer="http.scope")
-
-
-# AsgionConfig defaults
-
-
-def test_config_defaults() -> None:
-    cfg = AsgionConfig()
-    assert cfg.min_severity == Severity.PERF
-    assert cfg.include_rules == frozenset()
-    assert cfg.exclude_rules == frozenset()
-    assert cfg.categories == frozenset()
-    assert cfg.ttfb_threshold == 5.0
-    assert cfg.lifecycle_threshold == 30.0
-    assert cfg.body_size_threshold == 10 * 1024 * 1024
-    assert cfg.buffer_chunk_threshold == 1 * 1024 * 1024
-    assert cfg.body_delivery_threshold == 10.0
-    assert cfg.chunk_count_threshold == 100
 
 
 # AsgionConfig.allows(): severity filtering
@@ -63,18 +47,7 @@ def test_allows_blocks_rule_below_min_severity() -> None:
     assert cfg.allows(_INFO_RULE) is False
 
 
-def test_allows_default_min_severity_passes_perf() -> None:
-    cfg = AsgionConfig()
-    assert cfg.allows(_PERF_RULE) is True
-
-
 # AsgionConfig.allows(): categories filtering
-
-
-def test_allows_no_categories_passes_any_layer() -> None:
-    cfg = AsgionConfig(categories=frozenset())
-    assert cfg.allows(_PERF_RULE) is True  # layer="http.fsm"
-    assert cfg.allows(_WARN_RULE) is True  # layer="http.semantic"
 
 
 def test_allows_exact_category_match() -> None:
@@ -98,12 +71,6 @@ def test_allows_multiple_categories() -> None:
 
 
 # AsgionConfig.allows(): include_rules allowlist
-
-
-def test_allows_empty_include_rules_passes_all() -> None:
-    cfg = AsgionConfig(include_rules=frozenset())
-    assert cfg.allows(_PERF_RULE) is True
-    assert cfg.allows(_ERR_RULE) is True
 
 
 def test_allows_include_rules_allows_only_listed() -> None:
@@ -181,24 +148,7 @@ def test_allows_exclude_takes_precedence_over_include() -> None:
     assert cfg.allows(_PERF_RULE) is False
 
 
-# AsgionConfig immutability
-
-
-def test_config_is_frozen() -> None:
-    import dataclasses
-
-    cfg = AsgionConfig()
-    with pytest.raises(dataclasses.FrozenInstanceError):
-        cfg.min_severity = Severity.ERROR  # type: ignore[misc]
-
-
 # BUILTIN_PROFILES
-
-
-def test_builtin_profiles_exist() -> None:
-    assert "strict" in BUILTIN_PROFILES
-    assert "recommended" in BUILTIN_PROFILES
-    assert "minimal" in BUILTIN_PROFILES
 
 
 def test_profile_strict_allows_perf() -> None:
@@ -222,22 +172,7 @@ def test_profile_minimal_allows_only_errors() -> None:
     assert cfg.allows(_ERR_RULE) is True
 
 
-def test_builtin_profiles_are_independent() -> None:
-    """Mutating one profile does not affect others (they're separate instances)."""
-    import dataclasses
-
-    strict = BUILTIN_PROFILES["strict"]
-    modified = dataclasses.replace(strict, min_severity=Severity.ERROR)
-    assert BUILTIN_PROFILES["strict"].min_severity == Severity.PERF
-    assert modified.min_severity == Severity.ERROR
-
-
 # _parse_config: various inputs
-
-
-def test_parse_config_empty() -> None:
-    cfg = _parse_config({})
-    assert cfg == AsgionConfig()
 
 
 def test_parse_config_profile_recommended_sets_min_severity() -> None:
@@ -504,18 +439,7 @@ async def test_inspect_with_config_custom_thresholds() -> None:
         await send({"type": "http.response.body", "body": b"x" * 200, "more_body": False})
 
     wrapped = inspect(app, config=cfg, on_violation=violations.append)
-    scope = {
-        "type": "http",
-        "asgi": {"version": "3.0"},
-        "http_version": "1.1",
-        "method": "GET",
-        "scheme": "https",
-        "path": "/",
-        "raw_path": b"/",
-        "query_string": b"",
-        "root_path": "",
-        "headers": [],
-    }
+    scope = make_asgi_scope()
 
     async def receive():  # type: ignore[return]
         return {"type": "http.request", "body": b"", "more_body": False}
@@ -547,18 +471,7 @@ async def test_inspect_recommended_profile_suppresses_perf() -> None:
         await send({"type": "http.response.body", "body": b"", "more_body": False})
 
     wrapped = inspect(app, config=cfg, on_violation=violations.append)
-    scope = {
-        "type": "http",
-        "asgi": {"version": "3.0"},
-        "http_version": "1.1",
-        "method": "GET",
-        "scheme": "https",
-        "path": "/",
-        "raw_path": b"/",
-        "query_string": b"",
-        "root_path": "",
-        "headers": [],
-    }
+    scope = make_asgi_scope()
 
     async def receive():  # type: ignore[return]
         return {"type": "http.request", "body": b"", "more_body": False}
@@ -745,11 +658,6 @@ def test_parse_config_paths_empty_list() -> None:
 
 def test_parse_config_paths_non_list_ignored() -> None:
     cfg = _parse_config({"paths": "/"})
-    assert cfg.paths == ()
-
-
-def test_parse_config_paths_default_empty() -> None:
-    cfg = AsgionConfig()
     assert cfg.paths == ()
 
 
