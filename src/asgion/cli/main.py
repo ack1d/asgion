@@ -37,6 +37,9 @@ from asgion.rules import ALL_RULES, RULES
 def _parse_headers(raw: tuple[str, ...]) -> list[tuple[bytes, bytes]]:
     result: list[tuple[bytes, bytes]] = []
     for h in raw:
+        if ":" not in h:
+            click.echo(f"Warning: header {h!r} has no colon, expected 'Name: value'", err=True)
+            continue
         name, _, value = h.partition(":")
         name = name.strip()
         if not name:
@@ -381,7 +384,7 @@ def rules(
       asgion rules \n
       asgion rules HF-002 \n
       asgion rules --layer http --severity error \n
-      asgion rules --format JSON \n
+      asgion rules --format json \n
 
     \b
     Exit codes:
@@ -576,24 +579,25 @@ def trace(
 
 
 _INIT_BODY = """\
-profile = "recommended"  # "strict" | "recommended" | "minimal"
+# Built-in profile: "strict" (all rules), "recommended" (warning+), "minimal" (error only)
+profile = "recommended"
 
-# Rule filtering
-# min_severity = "perf"           # "perf" | "info" | "warning" | "error"
+# Rule filtering - control which rules are checked
+# min_severity = "perf"           # ignore rules below this level
 # include_rules = []              # allowlist, e.g. ["HF-*", "SEM-001"]
 # exclude_rules = []              # denylist, e.g. ["SEM-006", "SEM-009"]
 # categories = []                 # layer filter, e.g. ["http.fsm", "http.semantic"]
 
-# Paths to check (CLI --path overrides)
+# Paths to check (CLI --path overrides these)
 # paths = ["/", "/api/users", "POST:/api/data", "ws:/ws/chat"]
 
-# Semantic thresholds
-# ttfb_threshold = 5.0            # SEM-006: seconds
-# lifecycle_threshold = 30.0      # SEM-007: seconds
-# body_size_threshold = 10_485_760  # SEM-008: bytes (10 MB)
-# buffer_chunk_threshold = 1_048_576  # SEM-009: bytes (1 MB)
-# body_delivery_threshold = 10.0  # SEM-010: seconds
-# chunk_count_threshold = 100     # SEM-011: max body chunks
+# Semantic thresholds - when to trigger performance/size warnings
+# ttfb_threshold = 5.0            # SEM-006: max time to first byte (seconds)
+# lifecycle_threshold = 30.0      # SEM-007: max request lifecycle (seconds)
+# body_size_threshold = 10_485_760  # SEM-008: max response body (bytes, 10 MB)
+# buffer_chunk_threshold = 1_048_576  # SEM-009: min chunk size (bytes, 1 MB)
+# body_delivery_threshold = 10.0  # SEM-010: max body delivery time (seconds)
+# chunk_count_threshold = 100     # SEM-011: max body chunks per response
 """
 
 

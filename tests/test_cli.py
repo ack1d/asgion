@@ -832,6 +832,21 @@ class TestCLI:
         assert result.exit_code == 0
         assert "Warning: unknown rule: NOPE-999" in result.output
 
+    def test_header_no_colon_warns(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "check",
+                "tests._cli_fixtures:good_app",
+                "-H",
+                "NoColon",
+                "--no-lifespan",
+            ],
+        )
+        assert result.exit_code == 0
+        assert "Warning: header 'NoColon' has no colon" in result.output
+
     def test_check_profile_with_exclude_and_severity(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
         config = tmp_path / ".asgion.toml"
         config.write_bytes(b'[profiles.ci]\nmin_severity = "warning"\n')
