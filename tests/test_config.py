@@ -655,6 +655,25 @@ def test_parse_config_paths_non_list_ignored() -> None:
     assert cfg.paths == ()
 
 
+def test_load_config_app_from_asgion_toml(tmp_path: Path) -> None:
+    toml = tmp_path / ".asgion.toml"
+    toml.write_bytes(b'app = "myapp:app"\n')
+    cfg = load_config(toml)
+    assert cfg.app == "myapp:app"
+
+
+def test_load_config_app_from_pyproject(tmp_path: Path) -> None:
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_bytes(b'[tool.asgion]\napp = "myproject.asgi:application"\n')
+    cfg = load_config(pyproject)
+    assert cfg.app == "myproject.asgi:application"
+
+
+def test_load_config_app_default_empty(tmp_path: Path) -> None:
+    cfg = load_config(tmp_path / "nonexistent.toml")
+    assert cfg.app == ""
+
+
 def test_load_config_paths_from_asgion_toml(tmp_path: Path) -> None:
     toml = tmp_path / ".asgion.toml"
     toml.write_bytes(b'paths = ["/", "/api/users", "POST:/api/data"]\n')

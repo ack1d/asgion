@@ -48,6 +48,24 @@ def _parse_headers(raw: tuple[str, ...]) -> list[tuple[bytes, bytes]]:
     return result
 
 
+def _resolve_app_path(app_path: str | None, config: AsgionConfig) -> str:
+    if app_path is not None:
+        return app_path
+    if config.app:
+        return config.app
+    cmd = click.style("asgion check myapp:app", bold=True)
+    cfg = click.style('app = "myapp:app"', bold=True)
+    click.echo(
+        f"Error: missing APP_PATH argument.\n\n"
+        f"  Provide it as an argument:\n"
+        f"    {cmd}\n\n"
+        f"  Or set it in config (.asgion.toml or pyproject.toml [tool.asgion]):\n"
+        f"    {cfg}",
+        err=True,
+    )
+    sys.exit(2)
+
+
 def _load(app_path: str) -> object:
     try:
         return load_app(app_path)
@@ -101,7 +119,7 @@ def cli() -> None:
 
 
 @cli.command()
-@click.argument("app_path", metavar="APP_PATH")
+@click.argument("app_path", metavar="APP_PATH", required=False, default=None)
 @click.option(
     "--path",
     "paths",
@@ -195,7 +213,7 @@ def cli() -> None:
     ),
 )
 def check(
-    app_path: str,
+    app_path: str | None,
     paths: tuple[str, ...],
     strict: bool,
     fmt: str,
@@ -217,10 +235,12 @@ def check(
     """Check an ASGI app for protocol violations.
 
     APP_PATH is a Python import path (module:attribute).
+    If omitted, reads from config file (app = "myapp:app").
 
     \b
     Examples:
       asgion check myapp:app \n
+      asgion check                    # uses app from config \n
       asgion check myapp:app --path /api/users --path ws:/ws/chat \n
       asgion check myapp:app --strict --min-severity warning \n
       asgion check myapp:app --path "POST:/api/users" -H "Content-Type: application/json" -d '{}' \n
@@ -231,13 +251,14 @@ def check(
       1  violations found (only with --strict) \n
       2  runtime error (bad module path, invalid config, etc.) \n
     """
-    app = _load(app_path)
-
     try:
         config: AsgionConfig = load_config(config_path)
     except ConfigError as exc:
         click.echo(f"Error: invalid config: {exc}", err=True)
         sys.exit(2)
+
+    app_path = _resolve_app_path(app_path, config)
+    app = _load(app_path)
 
     if profile is not None:
         user_profiles = load_user_profiles(config_path)
@@ -420,7 +441,7 @@ def rules(
 
 
 @cli.command()
-@click.argument("app_path", metavar="APP_PATH")
+@click.argument("app_path", metavar="APP_PATH", required=False, default=None)
 @click.option(
     "--path",
     "paths",
@@ -489,7 +510,7 @@ def rules(
     help="Minimum severity for violation markers.",
 )
 def trace(
-    app_path: str,
+    app_path: str | None,
     paths: tuple[str, ...],
     fmt: str,
     no_color: bool,
@@ -507,6 +528,7 @@ def trace(
     """Record every receive()/send() as structured traces.
 
     APP_PATH is a Python import path (module:attribute).
+    If omitted, reads from config file (app = "myapp:app").
 
     Each trace captures the full ASGI lifecycle of a connection:
     scope, events with nanosecond timestamps, and a summary.
@@ -514,6 +536,7 @@ def trace(
     \b
     Examples:
       asgion trace myapp:app \n
+      asgion trace                    # uses app from config \n
       asgion trace myapp:app --format json \n
       asgion trace myapp:app --path "POST:/api/users" -d '{}' \n
       asgion trace myapp:app --path ws:/ws/chat \n
@@ -524,16 +547,15 @@ def trace(
       1  violations found (only with --strict) \n
       2  runtime error (bad module path, etc.) \n
     """
+    try:
+        trace_config = load_config()
+    except ConfigError:
+        trace_config = AsgionConfig()
+
+    app_path = _resolve_app_path(app_path, trace_config)
     app = _load(app_path)
 
-    if paths:
-        final_paths = paths
-    else:
-        try:
-            trace_config = load_config()
-        except ConfigError:
-            trace_config = AsgionConfig()
-        final_paths = trace_config.paths or ("/",)
+    final_paths = paths or trace_config.paths or ("/",)
 
     default_method, headers, body = _prepare_request(method, raw_headers, raw_body)
 
@@ -579,6 +601,9 @@ def trace(
 
 
 _INIT_BODY = """\
+# ASGI app import path - allows running `asgion check` without arguments
+# app = "myapp:app"
+
 # Built-in profile: "strict" (all rules), "recommended" (warning+), "minimal" (error only)
 profile = "recommended"
 

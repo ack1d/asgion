@@ -76,6 +76,10 @@ class AsgionConfig:
     - ``"lifespan.scope"``, ``"lifespan.events"``, ``"lifespan.fsm"``
     """
 
+    app: str = ""
+    """ASGI app import path (module:attribute). Used by CLI when APP_PATH argument
+    is omitted. Example: ``"myapp:app"`` or ``"myapp.main:application"``."""
+
     paths: tuple[str, ...] = ()
     """Paths to check when run from CLI. Supports protocol prefixes (ws:/path)
     and method prefixes (POST:/path). CLI --path overrides this. Empty = default "/"."""
@@ -327,6 +331,8 @@ def _parse_config(
     except (ValueError, TypeError) as exc:
         raise ConfigError(str(exc)) from exc
 
+    if (v := data.get("app")) is not None:
+        kwargs["app"] = str(v)
     if isinstance(rules := data.get("include_rules"), list):
         kwargs["include_rules"] = frozenset(str(r) for r in rules)
     if isinstance(rules := data.get("exclude_rules"), list):

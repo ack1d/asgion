@@ -266,6 +266,30 @@ class TestCLI:
         assert result.exit_code == 0
         assert "No violations found." in result.output
 
+    def test_check_no_arg_no_config_exits_2(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(cli, ["check", "--no-lifespan"])
+        assert result.exit_code == 2
+        assert "missing APP_PATH" in result.output
+
+    def test_check_app_from_asgion_toml(self, tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        monkeypatch.chdir(tmp_path)
+        config = tmp_path / ".asgion.toml"
+        config.write_text('app = "tests._cli_fixtures:good_app"\n')
+        runner = CliRunner()
+        result = runner.invoke(cli, ["check", "--no-lifespan", "--no-color"])
+        assert result.exit_code == 0
+        assert "No violations found." in result.output
+
+    def test_check_app_from_pyproject_toml(self, tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        monkeypatch.chdir(tmp_path)
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text('[tool.asgion]\napp = "tests._cli_fixtures:good_app"\n')
+        runner = CliRunner()
+        result = runner.invoke(cli, ["check", "--no-lifespan", "--no-color"])
+        assert result.exit_code == 0
+        assert "No violations found." in result.output
+
     def test_check_bad_app(self) -> None:
         runner = CliRunner()
         result = runner.invoke(
