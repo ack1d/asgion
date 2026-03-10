@@ -8,6 +8,7 @@ from asgion.cli._driver import parse_path
 from asgion.cli._loader import LoadError, load_app
 from asgion.cli._output import (
     _fmt_duration,
+    format_github,
     format_json,
     format_junit,
     format_rules_json,
@@ -316,6 +317,15 @@ class TestCLI:
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["summary"]["total"] > 0
+
+    def test_check_github_format(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            ["check", "tests._cli_fixtures:bad_app", "--format", "github", "--no-lifespan"],
+        )
+        assert result.exit_code == 0
+        assert "::error " in result.output or "::warning " in result.output
 
     def test_check_exclude_rules(self) -> None:
         runner = CliRunner()
@@ -1031,6 +1041,69 @@ class TestFormatJunit:
         ts = root.find("testsuite")
         assert ts is not None
         assert ts.get("errors") == "1"
+
+
+class TestFormatGithub:
+    def _make_report(self, *, violations: list[Violation] | None = None) -> CheckReport:
+        vv = violations or []
+        return CheckReport(
+            app_path="myapp:app",
+            results=[CheckResult("http", path="/", method="GET", violations=vv)],
+        )
+
+    def test_github_empty(self) -> None:
+        out = format_github(self._make_report())
+        assert out == ""
+
+    def test_github_error(self) -> None:
+        v = Violation(
+            rule_id="G-001",
+            severity=Severity.ERROR,
+            message="scope is not a dict",
+        )
+        out = format_github(self._make_report(violations=[v]))
+        assert out == "::error title=[G-001] error::scope is not a dict (GET /)"
+
+    def test_github_warning(self) -> None:
+        v = Violation(
+            rule_id="HE-007",
+            severity=Severity.WARNING,
+            message="Unusual status",
+        )
+        out = format_github(self._make_report(violations=[v]))
+        assert out == "::warning title=[HE-007] warning::Unusual status (GET /)"
+
+    def test_github_info_as_notice(self) -> None:
+        v = Violation(
+            rule_id="SEM-001",
+            severity=Severity.INFO,
+            message="Info message",
+        )
+        out = format_github(self._make_report(violations=[v]))
+        assert "::notice " in out
+
+    def test_github_min_severity_filter(self) -> None:
+        v = Violation(
+            rule_id="SEM-006",
+            severity=Severity.PERF,
+            message="Slow TTFB",
+        )
+        out = format_github(
+            self._make_report(violations=[v]),
+            min_severity=Severity.WARNING,
+        )
+        assert out == ""
+
+    def test_github_multiple(self) -> None:
+        violations = [
+            Violation(rule_id="G-001", severity=Severity.ERROR, message="bad scope"),
+            Violation(rule_id="HE-007", severity=Severity.WARNING, message="bad status"),
+        ]
+        out = format_github(self._make_report(violations=violations))
+        lines = out.strip().split("\n")
+        assert len(lines) == 2
+        assert lines[0].startswith("::error ")
+        assert lines[1].startswith("::warning ")
 
 
 class TestInit:

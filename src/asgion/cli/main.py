@@ -11,6 +11,7 @@ import click
 from asgion import __version__
 from asgion.cli._loader import LoadError, load_app
 from asgion.cli._output import (
+    format_github,
     format_json,
     format_junit,
     format_rule_detail,
@@ -21,7 +22,7 @@ from asgion.cli._output import (
     format_trace_json,
     format_trace_text,
 )
-from asgion.cli._runner import run_check
+from asgion.cli._runner import CheckReport, run_check
 from asgion.cli._trace import run_trace
 from asgion.core._types import Severity
 from asgion.core.config import (
@@ -105,6 +106,26 @@ _LAYERS = [
 ]
 
 
+def _render_check(
+    fmt: str,
+    report: CheckReport,
+    severity: Severity,
+    *,
+    no_color: bool,
+) -> str:
+    match fmt:
+        case "json":
+            return format_json(report, min_severity=severity)
+        case "sarif":
+            return format_sarif(report, min_severity=severity)
+        case "junit":
+            return format_junit(report, min_severity=severity)
+        case "github":
+            return format_github(report, min_severity=severity)
+        case _:
+            return format_text(report, min_severity=severity, no_color=no_color)
+
+
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
 @click.version_option(__version__, "-V", "--version", message="asgion %(version)s")
 def cli() -> None:
@@ -131,7 +152,7 @@ def cli() -> None:
 @click.option(
     "--format",
     "fmt",
-    type=click.Choice(["text", "json", "sarif", "junit"]),
+    type=click.Choice(["text", "json", "sarif", "junit", "github"]),
     default="text",
     show_default=True,
     help="Output format.",
@@ -338,26 +359,10 @@ def check(
     )
 
     if out is not None:
-        if fmt == "json":
-            file_output = format_json(report, min_severity=severity)
-        elif fmt == "sarif":
-            file_output = format_sarif(report, min_severity=severity)
-        elif fmt == "junit":
-            file_output = format_junit(report, min_severity=severity)
-        else:
-            file_output = format_text(report, min_severity=severity, no_color=True)
-        Path(out).write_text(file_output + "\n")
-
-    if not quiet and out is None:
-        if fmt == "json":
-            output = format_json(report, min_severity=severity)
-        elif fmt == "sarif":
-            output = format_sarif(report, min_severity=severity)
-        elif fmt == "junit":
-            output = format_junit(report, min_severity=severity)
-        else:
-            output = format_text(report, min_severity=severity, no_color=no_color)
-        click.echo(output)
+        rendered = _render_check(fmt, report, severity, no_color=True)
+        Path(out).write_text(rendered + "\n")
+    elif not quiet:
+        click.echo(_render_check(fmt, report, severity, no_color=no_color))
 
     violations = report.filtered(severity)
     if strict and violations:

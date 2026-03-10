@@ -176,6 +176,34 @@ def _summary_line(
     return "  |  ".join(parts)
 
 
+_GITHUB_LEVEL: dict[Severity, str] = {
+    Severity.ERROR: "error",
+    Severity.WARNING: "warning",
+    Severity.INFO: "notice",
+    Severity.PERF: "notice",
+}
+
+
+def format_github(
+    report: CheckReport,
+    *,
+    min_severity: Severity = Severity.PERF,
+) -> str:
+    """Format as GitHub Actions workflow commands (``::error::``, etc.)."""
+    min_level = SEVERITY_LEVEL[min_severity]
+    lines: list[str] = []
+    for result in report.results:
+        label = _result_label(result)
+        for v in result.violations:
+            if SEVERITY_LEVEL[v.severity] < min_level:
+                continue
+            level = _GITHUB_LEVEL[v.severity]
+            title = f"[{v.rule_id}] {v.severity}"
+            msg = f"{v.message} ({label})"
+            lines.append(f"::{level} title={title}::{msg}")
+    return "\n".join(lines)
+
+
 _SARIF_LEVEL: dict[Severity, str] = {
     Severity.ERROR: "error",
     Severity.WARNING: "warning",
