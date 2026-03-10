@@ -459,9 +459,15 @@ def format_rule_detail(rule: Rule, *, no_color: bool = False) -> str:
     if rule.hint:
         w(f"    hint: {rule.hint}")
     w("")
-    w(f"  layer: {rule.layer}")
+    w(f"  layer:      {rule.layer}")
     if rule.scope_types:
         w(f"  applies to: {', '.join(rule.scope_types)}")
+    if rule.tags:
+        w(f"  tags:       {', '.join(sorted(rule.tags))}")
+    if rule.deprecated:
+        w(f"  {_c('deprecated', _DIM, color=color)}")
+    w("")
+    w(f'  suppress: exclude_rules = ["{rule.id}"]')
 
     return "\n".join(lines)
 

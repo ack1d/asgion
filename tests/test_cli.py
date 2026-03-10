@@ -519,7 +519,9 @@ class TestCLI:
         assert "RULE" in result.output
         assert "[HF-001]" in result.output
         assert "error" in result.output
-        assert "layer: http.fsm" in result.output
+        assert "layer:" in result.output
+        assert "applies to:" in result.output
+        assert 'suppress: exclude_rules = ["HF-001"]' in result.output
 
     def test_rules_single_lookup_json(self) -> None:
         runner = CliRunner()
