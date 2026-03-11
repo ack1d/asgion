@@ -17,9 +17,9 @@ inputs:
     required: false
     default: "true"
   format:
-    description: "Output format: text, json, sarif, junit"
+    description: "Output format: text, json, sarif, junit, github"
     required: false
-    default: "text"
+    default: "github"
   args:
     description: "Additional CLI arguments"
     required: false
@@ -30,6 +30,10 @@ inputs:
     default: "3.12"
   asgion-version:
     description: "Pin asgion version (empty = latest)"
+    required: false
+    default: ""
+  install-command:
+    description: "Custom install command (overrides default pip install). Use when your app has extra dependencies."
     required: false
     default: ""
 
@@ -52,8 +56,11 @@ runs:
       shell: bash
       env:
         ASGION_VERSION: ${{ inputs.asgion-version }}
+        INSTALL_CMD: ${{ inputs.install-command }}
       run: |
-        if [ -n "$ASGION_VERSION" ]; then
+        if [ -n "$INSTALL_CMD" ]; then
+          eval "$INSTALL_CMD"
+        elif [ -n "$ASGION_VERSION" ]; then
           pip install "asgion[cli]==$ASGION_VERSION"
         else
           pip install "asgion[cli]"
@@ -79,10 +86,14 @@ runs:
           CMD="$CMD --strict"
         fi
 
-        if [ "$INPUT_FORMAT" != "text" ]; then
+        if [ "$INPUT_FORMAT" != "text" ] && [ "$INPUT_FORMAT" != "github" ]; then
           REPORT="${RUNNER_TEMP}/asgion-report.${INPUT_FORMAT}"
           CMD="$CMD --format $INPUT_FORMAT --out $REPORT"
           echo "report-file=$REPORT" >> "$GITHUB_OUTPUT"
+        fi
+
+        if [ "$INPUT_FORMAT" = "github" ]; then
+          CMD="$CMD --format github"
         fi
 
         if [ -n "$INPUT_ARGS" ]; then
@@ -90,8 +101,33 @@ runs:
         fi
 
         set +e
-        $CMD
+        $CMD 2>&1 | tee "${RUNNER_TEMP}/asgion-output.txt"
         CODE=$?
         set -e
         echo "exit-code=$CODE" >> "$GITHUB_OUTPUT"
         exit $CODE
+
+    - name: Job summary
+      if: always()
+      shell: bash
+      env:
+        INPUT_FORMAT: ${{ inputs.format }}
+      run: |
+        OUTPUT="${RUNNER_TEMP}/asgion-output.txt"
+        if [ ! -f "$OUTPUT" ]; then
+          exit 0
+        fi
+        {
+          echo "### asgion — ASGI Protocol Check"
+          echo ""
+          if [ "$INPUT_FORMAT" = "github" ]; then
+            echo '```'
+            # Strip ::level:: prefixes for readable summary
+            sed 's/^::\(error\|warning\|notice\)[^:]*:://' "$OUTPUT"
+            echo '```'
+          else
+            echo '```'
+            cat "$OUTPUT"
+            echo '```'
+          fi
+        } >> "$GITHUB_STEP_SUMMARY"
