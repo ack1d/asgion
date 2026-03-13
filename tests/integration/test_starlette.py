@@ -1,6 +1,5 @@
 """Integration tests: asgion + Starlette."""
 
-import asyncio
 from collections.abc import AsyncGenerator, AsyncIterator, Callable
 from contextlib import asynccontextmanager
 
@@ -15,16 +14,12 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, RedirectResponse, Response, StreamingResponse
 from starlette.routing import Route
 
-from asgion import BUILTIN_PROFILES, Inspector
+from asgion import Inspector
 
-from .conftest import drive_lifespan
-
-_CONFIG = BUILTIN_PROFILES["recommended"]
+from ._scenarios import FrameworkTestSuite
+from .conftest import CONFIG, drive_lifespan
 
 pytestmark = pytest.mark.asgi_validate(min_severity="warning")
-
-
-# App
 
 
 def _make_app() -> Starlette:
@@ -59,13 +54,37 @@ def _make_app() -> Starlette:
         return StreamingResponse(_gen(), media_type="text/plain")
 
     async def custom_exception(request: Request) -> None:
-        raise HTTPException(status_code=418, detail="I'm a teapot")
+        raise HTTPException(status_code=429, detail="Too Many Requests")
 
     async def bad_content_length(request: Request) -> Response:
         return Response(content=b"12345", headers={"Content-Length": "3"})
 
     async def error(request: Request) -> None:
         raise ValueError("oops")
+
+    async def cors_bad(request: Request) -> Response:
+        return Response(
+            content=b"ok",
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Credentials": "true",
+            },
+        )
+
+    async def many_chunks(request: Request) -> StreamingResponse:
+        async def _gen() -> AsyncGenerator[bytes, None]:
+            for i in range(150):
+                yield f"{i}\n".encode()
+
+        return StreamingResponse(_gen(), media_type="text/plain")
+
+    async def body_on_204(request: Request) -> Response:
+        return Response(content=b'{"deleted": true}', status_code=204)
+
+    async def insecure_cookie(request: Request) -> Response:
+        resp = Response(content=b"ok")
+        resp.set_cookie("session", "abc123", path="/")
+        return resp
 
     return Starlette(
         routes=[
@@ -79,141 +98,61 @@ def _make_app() -> Starlette:
             Route("/custom-exception", custom_exception),
             Route("/bad-content-length", bad_content_length),
             Route("/error", error),
+            Route("/cors-bad", cors_bad),
+            Route("/many-chunks", many_chunks),
+            Route("/body-on-204", body_on_204),
+            Route("/insecure-cookie", insecure_cookie),
         ]
     )
 
 
-# Fixtures
-
-
 @pytest.fixture
-def app(asgi_inspect: Callable[..., Inspector]) -> Inspector:
-    return asgi_inspect(_make_app(), config=_CONFIG)
+def raw_app() -> Starlette:
+    return _make_app()
 
 
-@pytest.fixture
-async def client(app: Inspector) -> AsyncIterator[httpx.AsyncClient]:
-    transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)  # type: ignore[arg-type]
-    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as c:
-        yield c
-
-
-# Tests — Happy Path
-
-
-async def test_get_json(client: httpx.AsyncClient) -> None:
-    r = await client.get("/hello")
-    assert r.status_code == 200
-    assert r.json() == {"hello": "world"}
-    assert r.headers["content-type"].startswith("application/json")
-
-
-async def test_404(client: httpx.AsyncClient) -> None:
-    r = await client.get("/not-found")
-    assert r.status_code == 404
-
-
-async def test_post_with_body(client: httpx.AsyncClient) -> None:
-    payload = b"ping pong"
-    r = await client.post("/echo", content=payload)
-    assert r.status_code == 200
-    assert r.content == payload
-    assert r.headers["content-type"] == "application/octet-stream"
-
-
-async def test_custom_exception(client: httpx.AsyncClient) -> None:
-    r = await client.get("/custom-exception")
-    assert r.status_code == 418
-
-
-async def test_server_error_500(client: httpx.AsyncClient) -> None:
-    r = await client.get("/error")
-    assert r.status_code == 500
-
-
-# Tests — Status Code Semantics
-
-
-async def test_no_content_204(client: httpx.AsyncClient) -> None:
-    r = await client.get("/no-content")
-    assert r.status_code == 204
-    assert r.content == b""
-
-
-async def test_not_modified_304(client: httpx.AsyncClient) -> None:
-    r = await client.get("/not-modified")
-    assert r.status_code == 304
-    assert r.content == b""
-
-
-# Tests — Method Semantics
-
-
-async def test_head_request(client: httpx.AsyncClient) -> None:
-    r = await client.head("/hello")
-    assert r.status_code == 200
-    assert r.content == b""
-
-
-# Tests — Streaming
-
-
-async def test_streaming_response(client: httpx.AsyncClient) -> None:
-    r = await client.get("/stream")
-    assert r.status_code == 200
-    assert r.text == "hello world"
-    assert r.headers["content-type"].startswith("text/plain")
-
-
-async def test_empty_streaming_response(client: httpx.AsyncClient) -> None:
-    r = await client.get("/empty-stream")
-    assert r.status_code == 200
-    assert r.text == ""
-
-
-# Tests — Redirects
-
-
-async def test_redirect(client: httpx.AsyncClient) -> None:
-    r = await client.get("/redirect", follow_redirects=True)
-    assert r.status_code == 200
-    assert r.json() == {"hello": "world"}
-
-
-# Tests — Detection (violations expected)
+class TestStarlette(FrameworkTestSuite):
+    pass
 
 
 @pytest.mark.asgi_validate(exclude_rules={"SEM-003"}, min_severity="warning")
-async def test_bad_content_length_detected(client: httpx.AsyncClient, app: Inspector) -> None:
-    r = await client.get("/bad-content-length")
+async def test_bad_content_length_detected(
+    asgi_inspect: Callable[..., Inspector],
+) -> None:
+    app = asgi_inspect(_make_app(), config=CONFIG)
+    transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)  # type: ignore[arg-type]
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as c:
+        r = await c.get("/bad-content-length")
     assert r.status_code == 200
     assert r.content == b"12345"
-    rule_ids = {v.rule_id for v in app.violations}
-    assert "SEM-003" in rule_ids, f"Expected SEM-003, got: {rule_ids}"
+    matched = [v for v in app.violations if v.rule_id == "SEM-003"]
+    assert len(matched) == 1, f"Expected exactly 1 SEM-003, got: {matched}"
 
 
-# Tests — State Isolation
+@pytest.mark.asgi_validate(exclude_rules={"HF-012"}, min_severity="warning")
+async def test_body_on_204_detected(
+    asgi_inspect: Callable[..., Inspector],
+) -> None:
+    app = asgi_inspect(_make_app(), config=CONFIG)
+    transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)  # type: ignore[arg-type]
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as c:
+        r = await c.get("/body-on-204")
+    assert r.status_code == 204
+    matched = [v for v in app.violations if v.rule_id == "HF-012"]
+    assert len(matched) == 1, f"Expected exactly 1 HF-012, got: {matched}"
 
 
-async def test_multiple_requests_no_state_leak(client: httpx.AsyncClient) -> None:
-    for _ in range(3):
-        r = await client.get("/hello")
-        assert r.status_code == 200
-
-
-async def test_concurrent_requests(client: httpx.AsyncClient) -> None:
-    results = await asyncio.gather(
-        client.get("/hello"),
-        client.post("/echo", content=b"concurrent"),
-        client.get("/hello"),
-    )
-    assert results[0].status_code == 200
-    assert results[1].status_code == 200
-    assert results[1].content == b"concurrent"
-    assert results[2].status_code == 200
-
-
-# Tests — Lifespan
+@pytest.mark.asgi_validate(exclude_rules={"SEM-004"}, min_severity="warning")
+async def test_insecure_cookie_detected(
+    asgi_inspect: Callable[..., Inspector],
+) -> None:
+    app = asgi_inspect(_make_app(), config=CONFIG)
+    transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)  # type: ignore[arg-type]
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as c:
+        r = await c.get("/insecure-cookie")
+    assert r.status_code == 200
+    matched = [v for v in app.violations if v.rule_id == "SEM-004"]
+    assert len(matched) == 1, f"Expected exactly 1 SEM-004, got: {matched}"
 
 
 async def test_lifespan_no_violations(
@@ -230,7 +169,7 @@ async def test_lifespan_no_violations(
         stopped = True
 
     starlette_app = Starlette(lifespan=lifespan, routes=[])
-    inspected = asgi_inspect(starlette_app, config=_CONFIG)
+    inspected = asgi_inspect(starlette_app, config=CONFIG)
 
     sent = await drive_lifespan(inspected)
 
