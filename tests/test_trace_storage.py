@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
+
 from asgion.trace import (
     MemoryStorage,
     TraceEnvironment,
@@ -74,6 +76,16 @@ class TestFileStorage:
         storage = FileStorage(deep_path)
         storage.store(_make_record())
         assert deep_path.exists()
+
+    def test_rejects_readonly_directory(self, tmp_path: Path) -> None:
+        readonly = tmp_path / "readonly"
+        readonly.mkdir()
+        readonly.chmod(0o444)
+        try:
+            with pytest.raises(PermissionError, match="not writable"):
+                FileStorage(readonly)
+        finally:
+            readonly.chmod(0o755)
 
 
 class TestMakeFilename:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -35,6 +36,9 @@ class FileStorage:
     def __init__(self, trace_dir: Path) -> None:
         self._trace_dir = trace_dir
         self._trace_dir.mkdir(parents=True, exist_ok=True)
+        if not os.access(self._trace_dir, os.W_OK):
+            msg = f"Trace directory is not writable: {self._trace_dir}"
+            raise PermissionError(msg)
 
     def store(self, record: TraceRecord) -> None:
         from asgion.trace._format import serialize
