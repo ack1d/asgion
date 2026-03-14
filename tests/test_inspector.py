@@ -228,6 +228,26 @@ async def test_violations_by_scope_empty() -> None:
     assert inspector.violations_by_scope == {}
 
 
+def test_inspector_rejects_invalid_sample_rate() -> None:
+    async def app(scope, receive, send):  # type: ignore[no-untyped-def]
+        pass
+
+    with pytest.raises(ValueError, match="sample_rate"):
+        Inspector(app, trace=True, sample_rate=-0.1)
+    with pytest.raises(ValueError, match="sample_rate"):
+        Inspector(app, trace=True, sample_rate=1.5)
+
+
+def test_inspector_rejects_invalid_max_body_size() -> None:
+    async def app(scope, receive, send):  # type: ignore[no-untyped-def]
+        pass
+
+    with pytest.raises(ValueError, match="max_body_size"):
+        Inspector(app, trace=True, max_body_size=0)
+    with pytest.raises(ValueError, match="max_body_size"):
+        Inspector(app, trace=True, max_body_size=-1)
+
+
 async def test_inspect_function_still_works() -> None:
     """inspect() returns a plain ASGI callable; backward compatible."""
     from asgion import inspect

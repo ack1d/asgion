@@ -333,13 +333,19 @@ def _parse_config(
 
     if (v := data.get("app")) is not None:
         kwargs["app"] = str(v)
-    if isinstance(rules := data.get("include_rules"), list):
-        kwargs["include_rules"] = frozenset(str(r) for r in rules)
-    if isinstance(rules := data.get("exclude_rules"), list):
-        kwargs["exclude_rules"] = frozenset(str(r) for r in rules)
-    if isinstance(cats := data.get("categories"), list):
-        kwargs["categories"] = frozenset(str(c) for c in cats)
-    if isinstance(paths := data.get("paths"), list):
-        kwargs["paths"] = tuple(str(p) for p in paths)
+    for field_name, converter in (
+        ("include_rules", lambda items: frozenset(str(r) for r in items)),
+        ("exclude_rules", lambda items: frozenset(str(r) for r in items)),
+        ("categories", lambda items: frozenset(str(c) for c in items)),
+        ("paths", lambda items: tuple(str(p) for p in items)),
+    ):
+        if (val := data.get(field_name)) is not None:
+            if isinstance(val, str):
+                val = [val]
+            elif not isinstance(val, list):
+                raise ConfigError(
+                    f"{field_name} must be a list or string, got {type(val).__name__}"
+                )
+            kwargs[field_name] = converter(val)
 
     return dataclasses.replace(base, **kwargs)

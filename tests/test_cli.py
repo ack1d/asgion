@@ -17,8 +17,9 @@ from asgion.cli._output import (
     format_text,
 )
 from asgion.cli._runner import CheckReport, CheckResult, run_check
-from asgion.cli.main import cli
+from asgion.cli.main import _warn_config_filters, cli
 from asgion.core._types import Severity
+from asgion.core.config import AsgionConfig
 from asgion.core.violation import Violation
 from asgion.rules import ALL_RULES
 
@@ -1137,6 +1138,45 @@ class TestInit:
         result = runner.invoke(cli, ["init", "--pyproject"])
         assert result.exit_code == 0
         assert "[tool.asgion]" in result.output
+
+    def test_init_pyproject_malformed_toml_exits_2(self, tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "pyproject.toml").write_text("this is not valid toml ][[")
+        runner = CliRunner()
+        result = runner.invoke(cli, ["init", "--pyproject"])
+        assert result.exit_code == 2
+        assert "invalid TOML" in result.output
+
+
+class TestWarnConfigFilters:
+    def _warnings(self, config: AsgionConfig) -> list[str]:
+        from unittest.mock import patch
+
+        with patch("click.echo") as mock_echo:
+            _warn_config_filters(config)
+            return [str(c) for c in mock_echo.call_args_list]
+
+    def test_warns_unknown_include_rule(self) -> None:
+        msgs = self._warnings(AsgionConfig(include_rules=frozenset({"NOPE-999"})))
+        assert any("unknown rule: NOPE-999" in m for m in msgs)
+
+    def test_warns_unknown_exclude_rule(self) -> None:
+        msgs = self._warnings(AsgionConfig(exclude_rules=frozenset({"NOPE-999"})))
+        assert any("unknown rule: NOPE-999" in m for m in msgs)
+
+    def test_warns_unknown_category(self) -> None:
+        msgs = self._warnings(AsgionConfig(categories=frozenset({"blahblah"})))
+        assert any("unknown category: blahblah" in m for m in msgs)
+
+    def test_no_warning_for_valid_category_prefix(self) -> None:
+        assert self._warnings(AsgionConfig(categories=frozenset({"http"}))) == []
+
+    def test_no_warning_for_valid_rule(self) -> None:
+        assert self._warnings(AsgionConfig(include_rules=frozenset({"HF-001"}))) == []
+
+    def test_warns_glob_pattern_matching_nothing(self) -> None:
+        msgs = self._warnings(AsgionConfig(include_rules=frozenset({"NOPE-*"})))
+        assert any("no rules match pattern: NOPE-*" in m for m in msgs)
 
 
 class TestWsClose:

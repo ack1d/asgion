@@ -64,6 +64,13 @@ class Inspector:
         storage: TraceStorage | None = None,
         max_body_size: int = 64 * 1024,
     ) -> None:
+        if not (0.0 <= sample_rate <= 1.0):
+            msg = f"sample_rate must be between 0.0 and 1.0, got {sample_rate}"
+            raise ValueError(msg)
+        if max_body_size <= 0:
+            msg = f"max_body_size must be positive, got {max_body_size}"
+            raise ValueError(msg)
+
         _config = config or AsgionConfig()
 
         if exclude_rules:

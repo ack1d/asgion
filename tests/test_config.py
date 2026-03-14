@@ -213,16 +213,18 @@ def test_parse_config_list_field(field: str, values: list[str], expected: frozen
 
 
 @pytest.mark.parametrize(
-    ("field", "bad_value"),
+    ("field", "value", "expected"),
     [
-        ("exclude_rules", "SEM-006"),
-        ("include_rules", "SEM-001"),
-        ("categories", "http"),
+        ("exclude_rules", "SEM-006", frozenset({"SEM-006"})),
+        ("include_rules", "SEM-001", frozenset({"SEM-001"})),
+        ("categories", "http", frozenset({"http"})),
     ],
 )
-def test_parse_config_non_list_ignored(field: str, bad_value: str) -> None:
-    cfg = _parse_config({field: bad_value})
-    assert getattr(cfg, field) == frozenset()
+def test_parse_config_string_coerced_to_list(
+    field: str, value: str, expected: frozenset[str]
+) -> None:
+    cfg = _parse_config({field: value})
+    assert getattr(cfg, field) == expected
 
 
 def test_parse_config_thresholds() -> None:
@@ -650,9 +652,15 @@ def test_parse_config_paths_empty_list() -> None:
     assert cfg.paths == ()
 
 
-def test_parse_config_paths_non_list_ignored() -> None:
+@pytest.mark.parametrize("field", ["include_rules", "exclude_rules", "categories", "paths"])
+def test_parse_config_non_list_non_string_raises(field: str) -> None:
+    with pytest.raises(ConfigError, match=f"{field} must be a list or string"):
+        _parse_config({field: 42})
+
+
+def test_parse_config_paths_string_coerced_to_list() -> None:
     cfg = _parse_config({"paths": "/"})
-    assert cfg.paths == ()
+    assert cfg.paths == ("/",)
 
 
 def test_load_config_app_from_asgion_toml(tmp_path: Path) -> None:

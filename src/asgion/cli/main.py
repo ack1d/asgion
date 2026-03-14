@@ -35,6 +35,35 @@ from asgion.core.config import (
 from asgion.rules import ALL_RULES, RULES
 
 
+def _warn_config_filters(config: AsgionConfig) -> None:
+    from fnmatch import fnmatch
+
+    all_ids = [r.id for r in ALL_RULES]
+    all_layers = {r.layer for r in ALL_RULES}
+
+    for rule_id in config.include_rules:
+        if any(c in rule_id for c in "*?["):
+            if not any(fnmatch(rid, rule_id) for rid in all_ids):
+                click.echo(
+                    f"Warning: config include_rules: no rules match pattern: {rule_id}", err=True
+                )
+        elif rule_id not in RULES:
+            click.echo(f"Warning: config include_rules: unknown rule: {rule_id}", err=True)
+
+    for rule_id in config.exclude_rules:
+        if any(c in rule_id for c in "*?["):
+            if not any(fnmatch(rid, rule_id) for rid in all_ids):
+                click.echo(
+                    f"Warning: config exclude_rules: no rules match pattern: {rule_id}", err=True
+                )
+        elif rule_id not in RULES:
+            click.echo(f"Warning: config exclude_rules: unknown rule: {rule_id}", err=True)
+
+    for cat in config.categories:
+        if not any(layer == cat or layer.startswith(cat + ".") for layer in all_layers):
+            click.echo(f"Warning: config categories: unknown category: {cat}", err=True)
+
+
 def _parse_headers(raw: tuple[str, ...]) -> list[tuple[bytes, bytes]]:
     result: list[tuple[bytes, bytes]] = []
     for h in raw:
@@ -277,6 +306,7 @@ def check(
     except ConfigError as exc:
         click.echo(f"Error: invalid config: {exc}", err=True)
         sys.exit(2)
+    _warn_config_filters(config)
 
     app_path = _resolve_app_path(app_path, config)
     app = _load(app_path)
@@ -556,6 +586,7 @@ def trace(
         trace_config = load_config()
     except ConfigError:
         trace_config = AsgionConfig()
+    _warn_config_filters(trace_config)
 
     app_path = _resolve_app_path(app_path, trace_config)
     app = _load(app_path)
@@ -657,8 +688,12 @@ def init(pyproject: bool, force: bool) -> None:
         if toml_path.exists():
             import tomllib
 
-            with toml_path.open("rb") as f:
-                data = tomllib.load(f)
+            try:
+                with toml_path.open("rb") as f:
+                    data = tomllib.load(f)
+            except tomllib.TOMLDecodeError as exc:
+                click.echo(f"Error: invalid TOML in {toml_path}: {exc}", err=True)
+                raise SystemExit(2) from None
             if "asgion" in data.get("tool", {}):
                 click.echo(
                     "Warning: pyproject.toml already contains [tool.asgion]",
