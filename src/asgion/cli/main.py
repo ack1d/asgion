@@ -73,6 +73,7 @@ def _parse_headers(raw: tuple[str, ...]) -> list[tuple[bytes, bytes]]:
         name, _, value = h.partition(":")
         name = name.strip()
         if not name:
+            click.echo(f"Warning: header {h!r} has empty name, skipping", err=True)
             continue
         result.append((name.lower().encode(), value.strip().encode()))
     return result
@@ -307,6 +308,10 @@ def check(
         click.echo(f"Error: invalid config: {exc}", err=True)
         sys.exit(2)
     _warn_config_filters(config)
+
+    if timeout <= 0:
+        click.echo(f"Error: --timeout must be positive, got {timeout}", err=True)
+        sys.exit(2)
 
     app_path = _resolve_app_path(app_path, config)
     app = _load(app_path)
@@ -587,6 +592,13 @@ def trace(
     except ConfigError:
         trace_config = AsgionConfig()
     _warn_config_filters(trace_config)
+
+    if timeout <= 0:
+        click.echo(f"Error: --timeout must be positive, got {timeout}", err=True)
+        sys.exit(2)
+    if max_body_size <= 0:
+        click.echo(f"Error: --max-body-size must be positive, got {max_body_size}", err=True)
+        sys.exit(2)
 
     app_path = _resolve_app_path(app_path, trace_config)
     app = _load(app_path)

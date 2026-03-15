@@ -944,6 +944,45 @@ class TestParsePath:
         assert parse_path("/api", default_method="POST") == ("http", "/api", "POST")
 
 
+class TestParseHeaders:
+    def test_empty_header_name_warns(self) -> None:
+        from unittest.mock import patch
+
+        from asgion.cli.main import _parse_headers
+
+        with patch("click.echo") as mock_echo:
+            result = _parse_headers((": value",))
+            assert result == []
+            calls = [str(c) for c in mock_echo.call_args_list]
+            assert any("empty name" in c for c in calls)
+
+
+class TestCLIValidation:
+    def test_check_negative_timeout_exits_2(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(cli, ["check", "x:app", "--timeout", "-1"])
+        assert result.exit_code == 2
+        assert "--timeout must be positive" in result.output
+
+    def test_check_zero_timeout_exits_2(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(cli, ["check", "x:app", "--timeout", "0"])
+        assert result.exit_code == 2
+        assert "--timeout must be positive" in result.output
+
+    def test_trace_negative_timeout_exits_2(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(cli, ["trace", "x:app", "--timeout", "-1"])
+        assert result.exit_code == 2
+        assert "--timeout must be positive" in result.output
+
+    def test_trace_zero_max_body_size_exits_2(self) -> None:
+        runner = CliRunner()
+        result = runner.invoke(cli, ["trace", "x:app", "--max-body-size", "0"])
+        assert result.exit_code == 2
+        assert "--max-body-size must be positive" in result.output
+
+
 class TestTimeout:
     def test_hanging_app_times_out(self) -> None:
         async def hanging_app(scope, receive, send):  # type: ignore[no-untyped-def]
