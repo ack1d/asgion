@@ -4,6 +4,29 @@
 
 - ...
 
+## 0.6.1 (2026-03-16)
+
+### Features
+
+- `check`: `--format github` for GitHub Actions workflow commands (annotations in PR diffs).
+- `rules RULE_ID`: output now includes `tags`, `deprecated` status, and a `suppress:` line showing how to exclude the rule.
+- GitHub Action: `install-command` input, default `--format github` for PR annotations, job summary.
+
+### Fixes
+
+- `check`: format dispatch refactored, `_render_check` helper eliminates output duplication.
+- `FileStorage`: write permission check moved to constructor, fails fast with a clear error instead of silently deferring to the first `store()` call.
+- `Inspector`: constructor now validates `sample_rate` (must be 0.0-1.0) and `max_body_size` (must be positive), raises `ValueError` immediately instead of silently misbehaving.
+- Config: `include_rules`, `exclude_rules`, `categories`, and `paths` now accept a bare string as shorthand for a single-element list, previously silently ignored.
+- Config: `check` and `trace` now warn on unknown rule IDs, unmatched glob patterns, and unknown categories in config files.
+- `asgion init --pyproject`: malformed `pyproject.toml` now produces a clear error message and exits 2 instead of a raw traceback.
+- CLI: `--timeout` and `--max-body-size` now reject zero/negative values with exit 2.
+- CLI: `-H ": value"` (empty header name) now warns instead of silently skipping.
+
+### Internal
+
+- Integration tests: 6 frameworks (Django, Falcon, FastAPI, Litestar, Quart, Starlette), shared mixin scenarios, detection for SEM-003/SEM-004/SEM-011/SEM-012/HE-009/HF-012.
+
 ## 0.6.0 (2026-03-06)
 
 ### Features

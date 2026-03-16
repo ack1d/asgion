@@ -123,6 +123,9 @@ asgion init --pyproject  # prints [tool.asgion] block to stdout
 Exit codes: 0 = clean, 1 = violations (`--strict`), 2 = runtime error. See `asgion check --help`.
 App exceptions and timeouts are reported but do not affect exit codes — only protocol violations do.
 
+> **Note:** `asgion check myapp:app` imports your module and drives the ASGI app.
+> All application dependencies (FastAPI, SQLAlchemy, etc.) must be installed in the same environment as asgion.
+
 See the [full rule list](docs/rules.md) for all 163 rules and their descriptions.
 
 ## Python API
@@ -205,8 +208,11 @@ repos:
     rev: v0.6.0  # update with: pre-commit autoupdate
     hooks:
       - id: asgion
-        args: [myapp:app, --strict]
+        args: [myapp:app, --strict]  # args is required — specify your app target
 ```
+
+> pre-commit runs in an isolated virtualenv — asgion can only validate raw ASGI apps
+> that have no external imports. For apps with dependencies, use the CLI or GitHub Action instead.
 
 ## Configuration
 
